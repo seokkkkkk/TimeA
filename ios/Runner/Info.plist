@@ -58,5 +58,9 @@
 	</array>
 	<key>GIDClientID</key>
 	<string>1086087840408-sq3pdv5bkf9ujtiahn90l456vge1mn3e.apps.googleusercontent.com</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to location when open.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs access to location when in the background.</string>
 </dict>
 </plist>
