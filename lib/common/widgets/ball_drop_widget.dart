@@ -49,30 +49,35 @@ class _BallDropWidgetState extends State<BallDropWidget>
   }
 
   void _initializeBalls() {
-    _balls.clear(); // 공을 재초기화
+    _balls.clear(); // 기존 공 목록 초기화
     for (int i = 0; i < ballCount; i++) {
-      _balls.add(
-        BallPhysics(
-          radius: ballRadius,
-          position: Offset(
-            Random().nextDouble() * 300, // Random x position
-            Random().nextDouble() * 50, // Random y position
-          ),
-          velocity: Offset(
-            (Random().nextDouble() - 0.5) * 200, // Random x velocity
-            Random().nextDouble() * 200, // Random y velocity
-          ),
-        ),
-      );
+      _addNewBall();
     }
+  }
+
+  void _addNewBall() {
+    final newBall = BallPhysics(
+      radius: ballRadius,
+      position: Offset(
+        Random().nextDouble() * screenWidth, // 화면 상단의 랜덤 x 위치
+        0, // 새 공은 항상 화면 위에서 시작
+      ),
+      velocity: Offset(
+        (Random().nextDouble() - 0.5) * 200, // 랜덤 x 속도
+        Random().nextDouble() * 100, // 랜덤 y 속도
+      ),
+    );
+    _balls.add(newBall);
   }
 
   @override
   void didUpdateWidget(covariant BallDropWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.ballCount != oldWidget.ballCount) {
-      ballCount = widget.ballCount;
-      _initializeBalls(); // 새 공 개수에 맞게 재초기화
+    if (widget.ballCount > oldWidget.ballCount) {
+      final newBalls = widget.ballCount - oldWidget.ballCount;
+      for (int i = 0; i < newBalls; i++) {
+        _addNewBall();
+      }
     }
   }
 
