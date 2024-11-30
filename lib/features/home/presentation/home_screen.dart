@@ -11,7 +11,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int ballCount = 0; // 공 개수
+  int ballCount = 10; // 공 개수
 
   void _addBall() {
     setState(() {

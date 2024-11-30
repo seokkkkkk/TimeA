@@ -50,9 +50,12 @@ class LoginScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(''),
+        title: const Text(
+          '',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         centerTitle: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
       ),
       body: Center(
         child: Padding(
