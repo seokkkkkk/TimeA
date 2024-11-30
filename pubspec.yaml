@@ -1,0 +1,48 @@
+name: timea
+description: "A new Flutter project."
+publish_to: "none"
+version: 0.1.0
+
+environment:
+    sdk: ^3.5.4
+
+dependencies:
+    flutter:
+        sdk: flutter
+    firebase_core: ^3.8.0
+    firebase_auth: ^5.3.3
+    get: ^4.6.6
+    flutter_launcher_icons: ^0.14.1
+    flutter_svg:
+    simple_shadow: ^0.3.1
+    google_sign_in: ^6.2.2
+
+dev_dependencies:
+    flutter_test:
+        sdk: flutter
+    flutter_lints: ^4.0.0
+
+flutter:
+    uses-material-design: true
+    assets:
+        - assets/images/kakao.svg
+        - assets/images/google.svg
+        - assets/images/apple.svg
+        - assets/images/guest.svg
+        - assets/icons/icon.png
+        - assets/icons/logo.png
+        - assets/images/triangle-alert.svg
+        - assets/images/circle-check.svg
+        - assets/images/menu-home-1.svg
+        - assets/images/menu-home-2.svg
+        - assets/images/menu-map-1.svg
+        - assets/images/menu-map-2.svg
+        - assets/images/menu-profile-1.svg
+        - assets/images/menu-profile-2.svg
+        - assets/images/envelope.png
+
+flutter_launcher_icons:
+    android: true
+    ios: true
+    image_path: "assets/icons/icon.png"
+    remove_alpha_ios: true
