@@ -16,7 +16,7 @@ class TimeNavigationBar extends GetView<TimeNavigtaionBarController> {
         ),
         boxShadow: [
           BoxShadow(
-            color: context.theme.colorScheme.onSurface.withOpacity(0.3),
+            color: context.theme.colorScheme.primary.withOpacity(0.5),
             blurRadius: 5,
             offset: const Offset(0, 0),
           ),
@@ -37,7 +37,7 @@ class TimeNavigationBar extends GetView<TimeNavigtaionBarController> {
             selectedLabelStyle:
                 const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
             type: BottomNavigationBarType.fixed,
-            backgroundColor: context.theme.colorScheme.primary,
+            backgroundColor: Colors.white,
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(
                   icon: controller.currentIndex.value == 0

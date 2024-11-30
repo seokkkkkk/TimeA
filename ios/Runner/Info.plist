@@ -59,8 +59,14 @@
 	<key>GIDClientID</key>
 	<string>1086087840408-sq3pdv5bkf9ujtiahn90l456vge1mn3e.apps.googleusercontent.com</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs access to location when open.</string>
+	<string>현재 위치를 기반으로 맞춤형 서비스를 제공하기 위해 위치 정보 접근 권한이 필요합니다.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>This app needs access to location when in the background.</string>
+	<string>백그라운드에서도 위치 기반 알림 및 서비스를 제공하기 위해 위치 정보 접근 권한이 필요합니다.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>사진 촬영 및 이미지를 업로드하기 위해 카메라 접근 권한이 필요합니다.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>음성 녹음 및 관련 기능을 사용하기 위해 마이크 접근 권한이 필요합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>사진을 선택하고 업로드하기 위해 사진 라이브러리 접근 권한이 필요합니다.</string>
 </dict>
 </plist>

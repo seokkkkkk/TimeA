@@ -6,7 +6,8 @@ import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+  final bool showAppBar;
+  const MapScreen({super.key, this.showAppBar = true});
 
   @override
   MapScreenState createState() => MapScreenState();
@@ -51,9 +52,11 @@ class MapScreenState extends State<MapScreen> {
     final locationController = Get.find<GeolocationController>();
 
     return Scaffold(
-      appBar: const TimeAppBar(
-        title: '지도 화면',
-      ),
+      appBar: widget.showAppBar
+          ? const TimeAppBar(
+              title: '지도 🗺️',
+            )
+          : null,
       body: Obx(
         () {
           final currentPosition = locationController.currentPosition.value;

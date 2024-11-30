@@ -27,4 +27,16 @@ class SnackbarUtil {
           padding: const EdgeInsets.fromLTRB(32, 16, 16, 16));
     }
   }
+
+  static void showInfo(String title, String message) {
+    if (!Get.isSnackbarOpen) {
+      Get.snackbar(title, message,
+          icon:
+              SvgPicture.asset('assets/images/info.svg', width: 24, height: 24),
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color.fromARGB(255, 131, 131, 131),
+          colorText: Colors.black,
+          padding: const EdgeInsets.fromLTRB(32, 16, 16, 16));
+    }
+  }
 }
