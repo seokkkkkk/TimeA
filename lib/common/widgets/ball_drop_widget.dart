@@ -14,7 +14,7 @@ class BallDropWidget extends StatefulWidget {
 class _BallDropWidgetState extends State<BallDropWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late int ballCount; // `late`를 사용하여 초기화를 지연
+  late int ballCount;
   final List<BallPhysics> _balls = [];
   final double ballRadius = 30.0;
   double screenWidth = 0.0;
@@ -23,7 +23,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
   @override
   void initState() {
     super.initState();
-    ballCount = widget.ballCount; // 여기에서 widget의 값을 초기화
+    ballCount = widget.ballCount;
 
     _initializeBalls();
 
@@ -49,35 +49,36 @@ class _BallDropWidgetState extends State<BallDropWidget>
   }
 
   void _initializeBalls() {
-    _balls.clear(); // 기존 공 목록 초기화
+    _balls.clear();
     for (int i = 0; i < ballCount; i++) {
       _addNewBall();
     }
   }
 
   void _addNewBall() {
+    final randomOffsetX = (Random().nextDouble() - 0.5) * 50; // x 방향 속도 범위 설정
+    final randomOffsetY =
+        Random().nextDouble() * 50 + 100; // y 방향 속도 범위 설정 (항상 아래쪽)
+
     final newBall = BallPhysics(
       radius: ballRadius,
       position: Offset(
-        Random().nextDouble() * screenWidth, // 화면 상단의 랜덤 x 위치
-        0, // 새 공은 항상 화면 위에서 시작
+        Random().nextDouble() * screenWidth, // 화면의 랜덤 위치
+        Random().nextDouble() * 100, // 화면 상단 근처
       ),
-      velocity: Offset(
-        (Random().nextDouble() - 0.5) * 200, // 랜덤 x 속도
-        Random().nextDouble() * 100, // 랜덤 y 속도
-      ),
+      velocity: Offset(randomOffsetX, randomOffsetY), // 아래쪽으로 떨어지도록 초기 속도 설정
     );
+
     _balls.add(newBall);
   }
 
-  @override
-  void didUpdateWidget(covariant BallDropWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.ballCount > oldWidget.ballCount) {
-      final newBalls = widget.ballCount - oldWidget.ballCount;
-      for (int i = 0; i < newBalls; i++) {
-        _addNewBall();
-      }
+  void _scatterBalls(Offset touchPoint) {
+    for (final ball in _balls) {
+      final direction = (ball.position - touchPoint).normalize();
+      final randomSpeed = Random().nextDouble() * 300 + 100; // 속도 범위 설정
+      final newVelocity = direction * randomSpeed;
+
+      ball.velocity = newVelocity; // 새로운 속도로 업데이트
     }
   }
 
@@ -86,9 +87,8 @@ class _BallDropWidgetState extends State<BallDropWidget>
     super.didChangeDependencies();
     final screenHeight = MediaQuery.of(context).size.height;
     screenWidth = MediaQuery.of(context).size.width;
-    const navBarHeight =
-        kBottomNavigationBarHeight; // BottomNavigationBar height
-    bottomLimit = screenHeight - navBarHeight - 150; // Add padding
+    const navBarHeight = kBottomNavigationBarHeight;
+    bottomLimit = screenHeight - navBarHeight - 150;
   }
 
   @override
@@ -99,9 +99,17 @@ class _BallDropWidgetState extends State<BallDropWidget>
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: BallPainter(_balls),
-      child: Container(),
+    return GestureDetector(
+      onTapDown: (details) {
+        final touchPoint = details.localPosition;
+        setState(() {
+          _scatterBalls(touchPoint);
+        });
+      },
+      child: CustomPaint(
+        painter: BallPainter(_balls),
+        child: Container(),
+      ),
     );
   }
 }
