@@ -31,6 +31,7 @@ flutter:
         - assets/images/guest.svg
         - assets/icons/icon.png
         - assets/icons/logo.png
+        - assets/icons/typo.png
         - assets/images/triangle-alert.svg
         - assets/images/circle-check.svg
         - assets/images/menu-home-1.svg

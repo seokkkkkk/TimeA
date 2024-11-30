@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:timea/common/widgets/app_bar.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class MapScreen extends StatelessWidget {
+  const MapScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

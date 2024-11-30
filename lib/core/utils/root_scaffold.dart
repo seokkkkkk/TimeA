@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timea/common/controllers/navigtaion_bar_controller.dart';
-import 'package:timea/common/services/navigation_bar.dart';
+import 'package:timea/common/widgets/navigation_bar.dart';
 import 'package:timea/features/home/presentation/home_screen.dart';
+import 'package:timea/features/map/presentation/map_screen.dart';
 import 'package:timea/features/profile/presentation/profile_screen.dart';
 
 class RootScaffold extends StatefulWidget {
@@ -14,7 +15,7 @@ class RootScaffold extends StatefulWidget {
 
 class _RootScaffoldState extends State<RootScaffold> {
   static List<Widget> pages = [
-    const Placeholder(),
+    const MapScreen(),
     const HomeScreen(),
     const ProfileScreen(),
   ];
