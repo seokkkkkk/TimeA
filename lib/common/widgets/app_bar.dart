@@ -16,7 +16,7 @@ class TimeAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.bold),
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       ),
       centerTitle: true,
       backgroundColor: Colors.white,
