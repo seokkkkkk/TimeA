@@ -34,6 +34,9 @@ Time&는 추억을 저장하고, 특별한 순간을 공유할 수 있도록 설
 
 Flutter를 사용해 개발되었으며, Firebase를 활용하였습니다.
 
+
+![순간을 추억하는 새로운 방법](https://github.com/user-attachments/assets/93b0c09c-2c59-4ec6-af1c-6564bfcb2aba) ![Pasted Graphic](https://github.com/user-attachments/assets/0621d46b-a2c8-437d-ae0d-1d9583c46fa5)
+
 ---
 
 ### **설치 및 실행**
