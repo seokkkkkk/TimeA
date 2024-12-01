@@ -2,7 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 
 class BallPhysics {
-  final int id;
+  final String title;
   final double radius;
   Offset position;
   Offset velocity;
@@ -20,7 +20,7 @@ class BallPhysics {
   static const double maxVelocity = 500.0;
 
   BallPhysics._internal({
-    required this.id,
+    required this.title,
     required this.radius,
     required this.position,
     required this.velocity,
@@ -32,7 +32,7 @@ class BallPhysics {
   });
 
   factory BallPhysics({
-    required int id,
+    required String title,
     required double radius,
     required Offset position,
     required Offset velocity,
@@ -41,7 +41,7 @@ class BallPhysics {
     bool isUnlocked = false,
   }) {
     return BallPhysics._internal(
-      id: id,
+      title: title,
       radius: radius,
       position: position,
       velocity: velocity,

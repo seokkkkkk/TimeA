@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -9,8 +10,8 @@ import 'ball_physics.dart';
 import 'package:timea/common/widgets/ball_painter.dart';
 
 class BallDropWidget extends StatefulWidget {
-  final int ballCount;
-  const BallDropWidget({super.key, required this.ballCount});
+  final List<Map<String, dynamic>> capsules;
+  const BallDropWidget({super.key, required this.capsules});
 
   @override
   State<BallDropWidget> createState() => _BallDropWidgetState();
@@ -42,9 +43,9 @@ class _BallDropWidgetState extends State<BallDropWidget>
   @override
   void initState() {
     super.initState();
-    ballCount = widget.ballCount;
+    ballCount = widget.capsules.length;
 
-    _initializeBalls();
+    _initializeBalls(widget.capsules);
 
     // 가속도 센서 구독
     _listenToAccelerometer();
@@ -85,29 +86,29 @@ class _BallDropWidgetState extends State<BallDropWidget>
     });
   }
 
-  void _initializeBalls() {
+  void _initializeBalls(capsules) {
     _balls.clear();
-    for (int i = 0; i < ballCount; i++) {
-      _addNewBall();
+    for (final capsule in capsules) {
+      _addNewBall(capsule);
     }
   }
 
-  void _addNewBall() {
+  void _addNewBall(capsule) {
     final randomOffsetX = (Random().nextDouble() - 0.5) * 50;
     final randomOffsetY = Random().nextDouble() * 50 + 100;
 
     final newBall = BallPhysics(
-      id: _balls.length,
+      title: capsule['title'],
       radius: ballRadius,
       position: Offset(
         Random().nextDouble() * screenWidth,
         Random().nextDouble() * 100,
       ),
       velocity: Offset(randomOffsetX, randomOffsetY),
-      date: DateTime.now().add(Duration(days: Random().nextInt(7))), // 랜덤 날짜
+      date: (capsule['canUnlockedAt'] as Timestamp).toDate(),
       gpsCoordinates: Offset(
-        Random().nextDouble() * 100,
-        Random().nextDouble() * 100,
+        capsule['location'].longitude,
+        capsule['location'].latitude,
       ),
     );
 
@@ -224,7 +225,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text("Ball ID: ${ball.id}"),
+          title: Text(ball.title),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

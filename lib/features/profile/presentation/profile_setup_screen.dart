@@ -4,6 +4,7 @@ import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timea/core/services/firebase_auth_service.dart';
+import 'package:timea/core/services/firestore_service.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -25,10 +26,10 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null && _nicknameController.text.isNotEmpty) {
       try {
-        await _authService.saveUserToFirestore(
-          currentUser,
-          _nicknameController.text,
-          _profileImageUrl,
+        await FirestoreService.saveUserProfile(
+          user: currentUser,
+          nickname: _nicknameController.text,
+          profileImage: _profileImageUrl,
         );
         Get.offAllNamed('/'); // 프로필 저장 후 홈 화면으로 이동
       } catch (e) {

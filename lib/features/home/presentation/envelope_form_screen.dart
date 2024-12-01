@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,10 +8,12 @@ import 'package:intl/intl.dart';
 import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
+import 'package:timea/core/services/firebase_auth_service.dart';
+import 'package:timea/core/services/firestore_service.dart';
 import 'package:timea/features/map/presentation/map_screen.dart';
 
 class EnvelopeFormScreen extends StatefulWidget {
-  final VoidCallback onSubmit;
+  final Function(Map<String, dynamic>) onSubmit;
 
   const EnvelopeFormScreen({super.key, required this.onSubmit});
 
@@ -73,6 +77,21 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
     }
   }
 
+  Future<String?> _uploadImage() async {
+    if (image == null) return null;
+
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('capsules/${DateTime.now().millisecondsSinceEpoch}');
+      final uploadTask = await storageRef.putFile(File(image!.path));
+      return await uploadTask.ref.getDownloadURL();
+    } catch (e) {
+      SnackbarUtil.showError('이미지 업로드 실패', '이미지를 업로드하는 중 문제가 발생했습니다: $e');
+      return null;
+    }
+  }
+
   String _calculateDday(DateTime targetDate) {
     final now = DateTime.now();
     final difference = targetDate.difference(now).inDays;
@@ -88,6 +107,7 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final FirebaseAuthService authService = FirebaseAuthService();
     return Scaffold(
       appBar: const TimeAppBar(
         title: '기억하기 🔮',
@@ -196,13 +216,49 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_titleController.text.isNotEmpty &&
                       (_textContentController.text.isNotEmpty ||
                           image != null) &&
                       openDate != null &&
                       _geolocationController.currentPosition.value != null) {
-                    widget.onSubmit();
+                    final String? userId = authService.auth.currentUser?.uid;
+
+                    if (userId == null) {
+                      SnackbarUtil.showError(
+                        '사용자 정보 없음',
+                        '로그인된 사용자가 없습니다. 로그인 후 다시 시도해주세요.',
+                      );
+                      return;
+                    }
+
+                    final imageUrl = await _uploadImage();
+                    final capsuleData = {
+                      'title': _titleController.text,
+                      'content': _textContentController.text,
+                      'image': imageUrl ?? '',
+                      'location': GeoPoint(
+                        _geolocationController.currentPosition.value!.latitude,
+                        _geolocationController.currentPosition.value!.longitude,
+                      ),
+                      'userId': userId,
+                      'canUnlockedAt': openDate!,
+                    };
+
+                    await FirestoreService.saveCapsule(
+                      title: _titleController.text,
+                      content: _textContentController.text,
+                      imageUrl: imageUrl ?? '',
+                      location: GeoPoint(
+                        _geolocationController.currentPosition.value!.latitude,
+                        _geolocationController.currentPosition.value!.longitude,
+                      ),
+                      userId: userId,
+                      canUnlockedAt: openDate!,
+                    );
+
+                    widget.onSubmit(capsuleData);
+                    Get.offNamed('/home');
                   } else {
                     SnackbarUtil.showInfo(
                       '내용 입력 필요',
