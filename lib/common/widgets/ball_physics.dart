@@ -68,6 +68,7 @@ class BallPhysics {
     double deltaTime,
     double screenWidth,
     double bottomLimit,
+    double topLimit,
     double gravityX,
     double gravityY,
   ) {
@@ -89,16 +90,25 @@ class BallPhysics {
     // 위치 업데이트
     position += velocity * deltaTime;
 
-    // 경계 처리
+    // 경계 처리 (아래쪽)
     if (position.dy > bottomLimit - radius) {
       position = Offset(position.dx, bottomLimit - radius);
       velocity = Offset(velocity.dx, -velocity.dy * restitution);
     }
 
+    // 경계 처리 (위쪽)
+    if (position.dy - radius < topLimit) {
+      position = Offset(position.dx, topLimit + radius);
+      velocity = Offset(velocity.dx, -velocity.dy * restitution);
+    }
+
+    // 경계 처리 (왼쪽)
     if (position.dx - radius < 0) {
       position = Offset(radius, position.dy);
       velocity = Offset(-velocity.dx * restitution, velocity.dy);
-    } else if (position.dx + radius > screenWidth) {
+    }
+    // 경계 처리 (오른쪽)
+    else if (position.dx + radius > screenWidth) {
       position = Offset(screenWidth - radius, position.dy);
       velocity = Offset(-velocity.dx * restitution, velocity.dy);
     }

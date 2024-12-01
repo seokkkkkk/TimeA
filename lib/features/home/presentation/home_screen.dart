@@ -19,24 +19,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _showAddContentForm(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        return Padding(
-          padding: MediaQuery.of(context).viewInsets,
-          child: EnvelopeFormScreen(
-            onSubmit: () {
-              Navigator.of(context).pop();
-              _addBall();
-            },
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
