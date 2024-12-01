@@ -82,7 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 // 곧 만날 기억 캡슐
     final soonCapsules = widget.capsules.where((capsule) {
       final unlockDate = (capsule['canUnlockedAt'] as Timestamp).toDate();
-      final unlockedAt = capsule['unlockedAt'] as Timestamp?;
+      final unlockedAt = (capsule['unlockedAt'] as Timestamp?)?.toDate();
       return unlockDate.isAfter(DateTime.now()) &&
           unlockDate.isBefore(DateTime.now().add(const Duration(days: 7))) &&
           unlockedAt == null;
@@ -95,7 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     // 내가 연 기억 캡슐
     final openedCapsules = widget.capsules.where((capsule) {
-      final unlockedAt = capsule['unlockedAt'] as Timestamp?;
+      final unlockedAt = (capsule['unlockedAt'] as Timestamp?)?.toDate();
       return unlockedAt != null;
     }).toList()
       ..sort((a, b) {
@@ -109,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // 열지 않은 기억 캡슐
     final overdueCapsules = widget.capsules.where((capsule) {
       final unlockDate = (capsule['canUnlockedAt'] as Timestamp).toDate();
-      final unlockedAt = capsule['unlockedAt'] as Timestamp?;
+      final unlockedAt = (capsule['unlockedAt'] as Timestamp?)?.toDate();
       return unlockDate.isBefore(DateTime.now()) && unlockedAt == null;
     }).toList()
       ..sort((a, b) {
@@ -164,6 +164,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
+                  // 기한이 지난 기억 캡슐 리스트
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '당신을 기다리는 기억 캡슐',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 150,
+                    child: overdueCapsules.isEmpty
+                        ? const Center(
+                            child: Text(
+                              '기한이 지난 캡슐이 없습니다.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                        : CardBuilder(
+                            capsules: overdueCapsules,
+                            calculateDday: _calculateDday),
+                  ),
+                  const SizedBox(height: 24),
                   // D-DAY 임박 기억 캡슐 리스트
                   const Align(
                     alignment: Alignment.centerLeft,
@@ -215,33 +242,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           )
                         : CardBuilder(
                             capsules: openedCapsules,
-                            calculateDday: _calculateDday),
-                  ),
-                  const SizedBox(height: 24),
-                  // 기한이 지난 기억 캡슐 리스트
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '기한이 지난 기억 캡슐',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 150,
-                    child: overdueCapsules.isEmpty
-                        ? const Center(
-                            child: Text(
-                              '기한이 지난 캡슐이 없습니다.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          )
-                        : CardBuilder(
-                            capsules: overdueCapsules,
                             calculateDday: _calculateDday),
                   ),
                   const SizedBox(height: 24),

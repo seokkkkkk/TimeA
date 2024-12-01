@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
+import 'package:timea/core/services/firestore_service.dart';
 import 'dart:math';
 import 'ball_physics.dart';
 import 'package:timea/common/widgets/ball_painter.dart';
@@ -98,8 +99,12 @@ class _BallDropWidgetState extends State<BallDropWidget>
     final randomOffsetY = Random().nextDouble() * 50 + 100;
 
     final newBall = BallPhysics(
+      id: capsule['id'],
       title: capsule['title'],
+      content: capsule['content'],
+      imageUrl: capsule['imageUrl'],
       radius: ballRadius,
+      isUnlocked: capsule['unlockedAt'] != null,
       position: Offset(
         Random().nextDouble() * screenWidth,
         Random().nextDouble() * 100,
@@ -207,8 +212,6 @@ class _BallDropWidgetState extends State<BallDropWidget>
   }
 
   void _showBallDetails(BallPhysics ball) {
-    print(currentPosition);
-    print(heading);
     if (currentPosition == null || heading == null) {
       _showError("위치나 방향 정보를 가져오지 못했습니다.");
       return;
@@ -217,7 +220,8 @@ class _BallDropWidgetState extends State<BallDropWidget>
     final locationDifference = calculateLocationDifference(ball.gpsCoordinates);
     final locationMessage = locationDifference ?? '위치 정보를 가져오는 중...';
 
-    final isUnlockable = ball.date.isBefore(DateTime.now()) &&
+    final isUnlockable = !ball.isUnlocked &&
+        ball.date.isBefore(DateTime.now()) &&
         locationDifference != null &&
         locationDifference == '기억 캡슐의 위치입니다.';
 
@@ -229,31 +233,55 @@ class _BallDropWidgetState extends State<BallDropWidget>
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("날짜: ${ball.date}"),
-              Text("위치 차이: $locationMessage"),
-              Text("잠금 상태: ${ball.isUnlocked ? "해제됨" : "잠김"}"),
+              if (ball.isUnlocked) ...[
+                // Unlock 상태에서 보여줄 내용
+                if (ball.imageUrl.isNotEmpty)
+                  Image.network(ball.imageUrl, fit: BoxFit.cover),
+                const SizedBox(height: 8),
+                Text(
+                  ball.content,
+                  style: const TextStyle(fontSize: 16),
+                ),
+                Text("${ball.date}"),
+                Text(locationMessage),
+                Text("잠금 상태: ${ball.isUnlocked ? "해제됨" : "잠김"}"),
+              ] else ...[
+                // 잠긴 상태에서 보여줄 내용
+                Text("${ball.date}"),
+                Text(locationMessage),
+                Text("잠금 상태: ${ball.isUnlocked ? "해제됨" : "잠김"}"),
+              ],
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: isUnlockable
-                  ? () {
-                      setState(() {
-                        ball.isUnlocked = true;
-                      });
-                      Navigator.of(context).pop();
-                    }
-                  : null,
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.resolveWith<Color?>(
-                  (states) => isUnlockable ? Colors.blue : Colors.grey,
+            if (!ball.isUnlocked)
+              TextButton(
+                onPressed: isUnlockable
+                    ? () async {
+                        try {
+                          await FirestoreService.updateCapsuleStatus(
+                            capsuleId: ball.id,
+                            unlockedAt: DateTime.now(),
+                          );
+                          setState(() {
+                            ball.isUnlocked = true;
+                          });
+                          Navigator.of(context).pop();
+                        } catch (e) {
+                          _showError("잠금 해제에 실패했습니다.");
+                        }
+                      }
+                    : null,
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+                    (states) => isUnlockable ? Colors.blue : Colors.grey,
+                  ),
+                  foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+                    (states) => Colors.white,
+                  ),
                 ),
-                foregroundColor: WidgetStateProperty.resolveWith<Color?>(
-                  (states) => Colors.white,
-                ),
+                child: const Text("잠금 해제"),
               ),
-              child: const Text("잠금 해제"),
-            ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text("확인"),
@@ -271,7 +299,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
     final dy = ballCoordinates.dy - currentPosition!.latitude;
     final distance = sqrt(dx * dx + dy * dy) * 111000;
 
-    if (distance <= 5) {
+    if (distance <= 25) {
       return '기억 캡슐의 위치입니다.';
     }
 

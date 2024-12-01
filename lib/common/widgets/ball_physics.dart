@@ -2,7 +2,10 @@ import 'dart:math';
 import 'dart:ui';
 
 class BallPhysics {
+  final String id;
   final String title;
+  final String content;
+  final String imageUrl;
   final double radius;
   Offset position;
   Offset velocity;
@@ -11,7 +14,7 @@ class BallPhysics {
   final Color color;
   final DateTime date; // 날짜 속성 추가
   final Offset gpsCoordinates; // GPS 좌표 속성 추가
-  bool isUnlocked = false; // 잠금 상태
+  bool isUnlocked; // 잠금 해제 여부 속성 추가
 
   // 기존 상수 정의는 유지
   static const double baseGravity = 80.0;
@@ -20,7 +23,10 @@ class BallPhysics {
   static const double maxVelocity = 500.0;
 
   BallPhysics._internal({
+    required this.id,
     required this.title,
+    required this.content,
+    required this.imageUrl,
     required this.radius,
     required this.position,
     required this.velocity,
@@ -32,36 +38,71 @@ class BallPhysics {
   });
 
   factory BallPhysics({
+    required String id,
     required String title,
+    required String content,
+    required String imageUrl,
     required double radius,
     required Offset position,
     required Offset velocity,
     required DateTime date,
     required Offset gpsCoordinates,
-    bool isUnlocked = false,
+    required bool isUnlocked,
   }) {
     return BallPhysics._internal(
+      id: id,
       title: title,
+      content: content,
+      imageUrl: imageUrl,
       radius: radius,
       position: position,
       velocity: velocity,
       rotation: Random().nextDouble() * 2 * pi,
-      color: _getRandomColor(),
+      color: _getColor(
+        isUnlocked: isUnlocked,
+        date: date,
+        gpsCoordinates: gpsCoordinates,
+        currentPosition: position,
+      ),
       date: date,
       gpsCoordinates: gpsCoordinates,
       isUnlocked: isUnlocked,
     );
   }
 
-  static Color _getRandomColor() {
+  static Color _getColor({
+    required bool isUnlocked,
+    required DateTime date,
+    required Offset gpsCoordinates,
+    required Offset currentPosition,
+  }) {
     const predefinedColors = [
-      Color(0xFFFFE4A3),
-      Color(0xFFFFF4E0),
-      Color(0xFFFFCC66),
-      Color(0xFFFFD8C2),
-      Color(0xFFD9D9D9),
+      Color(0xFFFFCC66), // Unlocked (0번 색상)
+      Color(0xFFFFE4A3), // Current Date 이전, GPS 일치 (1번 색상)
+      Color(0xFFFFD8C2), // Current Date 이전, GPS 불일치 (2번 색상)
+      Color(0xFFFFF4E0), // Current Date 이후, GPS 일치 (3번 색상)
+      Color(0xFFD9D9D9), // Current Date 이후, GPS 불일치 (4번 색상)
     ];
-    return predefinedColors[Random().nextInt(predefinedColors.length)];
+
+    // 거리 계산 (GPS 좌표 간 거리)
+    double distance = (gpsCoordinates - currentPosition).distance *
+        111000; // Offset 거리 -> 미터 변환
+
+    if (isUnlocked) {
+      return predefinedColors[0]; // Unlocked 상태
+    } else if (date.isBefore(DateTime.now())) {
+      if (distance <= 25) {
+        return predefinedColors[1]; // Date 이전 + GPS 일치
+      } else {
+        return predefinedColors[2]; // Date 이전 + GPS 불일치
+      }
+    } else {
+      if (distance <= 25) {
+        return predefinedColors[3]; // Date 이후 + GPS 일치
+      } else {
+        return predefinedColors[4]; // Date 이후 + GPS 불일치
+      }
+    }
   }
 
   void update(

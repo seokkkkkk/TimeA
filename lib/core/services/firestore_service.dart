@@ -70,9 +70,29 @@ class FirestoreService {
           .where('userId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
           .get();
 
-      return querySnapshot.docs.map((doc) => doc.data()).toList();
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id; // 문서 ID를 추가
+        return data;
+      }).toList();
     } catch (e) {
       throw Exception('캡슐 목록을 가져오는 데 실패했습니다: $e');
+    }
+  }
+
+  /// 캡슐 상태 업데이트
+  static Future<void> updateCapsuleStatus({
+    required String capsuleId, // 캡슐 ID
+    required DateTime unlockedAt, // 캡슐 해제 시간
+  }) async {
+    final capsuleRef = _firestore.collection('capsules').doc(capsuleId);
+
+    try {
+      await capsuleRef.update({
+        'unlockedAt': Timestamp.fromDate(unlockedAt),
+      });
+    } catch (e) {
+      throw Exception('캡슐 상태 업데이트 실패: $e');
     }
   }
 }
