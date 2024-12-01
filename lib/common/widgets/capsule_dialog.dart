@@ -70,7 +70,14 @@ class CapsuleDetailsDialog extends StatelessWidget {
       actions: [
         if (!isUnlocked)
           TextButton(
-            onPressed: isUnlockable ? onUnlock : onUnlock,
+            onPressed: isUnlockable
+                ? onUnlock
+                : () {
+                    SnackbarUtil.showInfo(
+                      '잠금 해제 불가',
+                      '캡슐을 열기 위한 조건이 충족되지 않았습니다.',
+                    );
+                  },
             style: ButtonStyle(
               backgroundColor: WidgetStateProperty.resolveWith<Color?>(
                 (states) =>

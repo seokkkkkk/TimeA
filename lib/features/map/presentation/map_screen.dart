@@ -35,7 +35,7 @@ class MapScreenState extends State<MapScreen> {
     locationController.getLocation();
     locationController.currentPosition.listen((position) {
       if (position != null) {
-        updateLocationMarker(position);
+        updateLocationMarker(position.latitude, position.longitude);
       }
     });
   }
@@ -47,15 +47,15 @@ class MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
-  void updateLocationMarker(Position position) {
+  void updateLocationMarker(latitude, longitude) {
     if (_mapController != null) {
       final locationOverlay = _mapController?.getLocationOverlay();
       if (locationOverlay != null) {
         locationOverlay.setIsVisible(true);
         locationOverlay.setPosition(
           NLatLng(
-            position.latitude,
-            position.longitude,
+            latitude,
+            longitude,
           ),
         );
       }
@@ -69,7 +69,8 @@ class MapScreenState extends State<MapScreen> {
         final DateTime date = (capsule['canUnlockedAt'] as Timestamp).toDate();
         final isUnlockable = !isUnlocked &&
             date.isBefore(DateTime.now()) &&
-            canUnlock(capsule['location']);
+            canUnlock(
+                capsule['location'].latitude, capsule['location'].longitude);
         final marker = NMarker(
           id: 'capsule_${capsule['id']}',
           position: NLatLng(
@@ -119,7 +120,7 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
-  bool canUnlock(Position position) {
+  bool canUnlock(latitude, longitude) {
     final currentPosition = locationController.currentPosition.value;
     if (currentPosition == null) {
       return false;
@@ -128,8 +129,8 @@ class MapScreenState extends State<MapScreen> {
     final distance = Geolocator.distanceBetween(
       currentPosition.latitude,
       currentPosition.longitude,
-      position.latitude,
-      position.longitude,
+      latitude,
+      longitude,
     );
 
     return distance < 25; // 100m 이내에 있을 때만 언락 가능
@@ -147,7 +148,8 @@ class MapScreenState extends State<MapScreen> {
 
         final isUnlockable = !isUnlocked &&
             date.isBefore(DateTime.now()) &&
-            canUnlock(capsule['location']);
+            canUnlock(
+                capsule['location'].latitude, capsule['location'].longitude);
 
         return CapsuleDetailsDialog(
           title: title,
@@ -197,7 +199,8 @@ class MapScreenState extends State<MapScreen> {
                       ),
                       onMapReady: (controller) {
                         _mapController = controller;
-                        updateLocationMarker(currentPosition);
+                        updateLocationMarker(currentPosition.latitude,
+                            currentPosition.longitude);
                         addCapsuleOverlays(); // 지도 준비 완료 후 캡슐 오버레이 추가
                       },
                       forceGesture: false,

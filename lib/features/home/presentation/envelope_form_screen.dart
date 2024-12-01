@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -243,12 +245,12 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                       'title': _titleController.text,
                       'content': _textContentController.text,
                       'image': imageUrl ?? '',
-                      'location': GeoPoint(
+                      'location': Point(
                         _geolocationController.currentPosition.value!.latitude,
                         _geolocationController.currentPosition.value!.longitude,
                       ),
                       'userId': userId,
-                      'canUnlockedAt': openDate!,
+                      'canUnlockedAt': Timestamp.fromDate(openDate!)
                     };
 
                     final savedCapsuleId = await FirestoreService.saveCapsule(
