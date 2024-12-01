@@ -32,9 +32,12 @@ class FirestoreService {
   }
 
   // Firestore에서 사용자 정보 가져오기
-  static Future<DocumentSnapshot?> getUserProfile(String userId) async {
+  static Future<DocumentSnapshot?> getUserProfile() async {
     try {
-      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .get();
       return userDoc.exists ? userDoc : null;
     } catch (e) {
       throw Exception('프로필 데이터 로드 실패: $e');
