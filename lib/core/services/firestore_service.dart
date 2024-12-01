@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class FirestoreService {
   static final _firestore = FirebaseFirestore.instance;
 
-  static Future<void> saveCapsule({
+  static Future<String> saveCapsule({
     required String title,
     required String content,
     required String imageUrl,
@@ -15,7 +15,7 @@ class FirestoreService {
     final capsulesRef = _firestore.collection('capsules');
 
     try {
-      await capsulesRef.add({
+      return await capsulesRef.add({
         'title': title,
         'content': content,
         'image': imageUrl,
@@ -25,7 +25,7 @@ class FirestoreService {
         'uploadedAt': Timestamp.now(), // 현재 시간
         'unlockedAt': null, // null
         'userId': userId,
-      });
+      }).then((doc) => doc.id);
     } catch (e) {
       throw Exception('캡슐 저장 실패: $e');
     }

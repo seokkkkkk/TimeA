@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:timea/common/widgets/capsule_dialog.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
 import 'package:timea/core/services/firestore_service.dart';
 import 'dart:math';
@@ -102,7 +103,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
       id: capsule['id'],
       title: capsule['title'],
       content: capsule['content'],
-      imageUrl: capsule['imageUrl'],
+      imageUrl: capsule['imageUrl'] ?? '',
       radius: ballRadius,
       isUnlocked: capsule['unlockedAt'] != null,
       position: Offset(
@@ -212,82 +213,49 @@ class _BallDropWidgetState extends State<BallDropWidget>
   }
 
   void _showBallDetails(BallPhysics ball) {
-    if (currentPosition == null || heading == null) {
-      _showError("위치나 방향 정보를 가져오지 못했습니다.");
-      return;
+    final canProvideLocation = currentPosition != null && heading != null;
+
+    late final String? locationDifference;
+    late final String locationMessage;
+    late final bool isUnlockable;
+
+    if (canProvideLocation) {
+      locationDifference = calculateLocationDifference(ball.gpsCoordinates);
+      locationMessage = locationDifference ?? '위치 정보를 가져오는 중...';
+      isUnlockable = !ball.isUnlocked &&
+          ball.date.isBefore(DateTime.now()) &&
+          locationDifference != null &&
+          locationDifference == '기억 캡슐의 위치입니다.';
+    } else {
+      locationMessage = '위치 정보 제공 불가';
+      isUnlockable = false;
     }
-
-    final locationDifference = calculateLocationDifference(ball.gpsCoordinates);
-    final locationMessage = locationDifference ?? '위치 정보를 가져오는 중...';
-
-    final isUnlockable = !ball.isUnlocked &&
-        ball.date.isBefore(DateTime.now()) &&
-        locationDifference != null &&
-        locationDifference == '기억 캡슐의 위치입니다.';
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text(ball.title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (ball.isUnlocked) ...[
-                // Unlock 상태에서 보여줄 내용
-                if (ball.imageUrl.isNotEmpty)
-                  Image.network(ball.imageUrl, fit: BoxFit.cover),
-                const SizedBox(height: 8),
-                Text(
-                  ball.content,
-                  style: const TextStyle(fontSize: 16),
-                ),
-                Text("${ball.date}"),
-                Text(locationMessage),
-                Text("잠금 상태: ${ball.isUnlocked ? "해제됨" : "잠김"}"),
-              ] else ...[
-                // 잠긴 상태에서 보여줄 내용
-                Text("${ball.date}"),
-                Text(locationMessage),
-                Text("잠금 상태: ${ball.isUnlocked ? "해제됨" : "잠김"}"),
-              ],
-            ],
-          ),
-          actions: [
-            if (!ball.isUnlocked)
-              TextButton(
-                onPressed: isUnlockable
-                    ? () async {
-                        try {
-                          await FirestoreService.updateCapsuleStatus(
-                            capsuleId: ball.id,
-                            unlockedAt: DateTime.now(),
-                          );
-                          setState(() {
-                            ball.isUnlocked = true;
-                          });
-                          Navigator.of(context).pop();
-                        } catch (e) {
-                          _showError("잠금 해제에 실패했습니다.");
-                        }
-                      }
-                    : null,
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.resolveWith<Color?>(
-                    (states) => isUnlockable ? Colors.blue : Colors.grey,
-                  ),
-                  foregroundColor: WidgetStateProperty.resolveWith<Color?>(
-                    (states) => Colors.white,
-                  ),
-                ),
-                child: const Text("잠금 해제"),
-              ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("확인"),
-            ),
-          ],
-        );
+        return CapsuleDetailsDialog(
+            title: ball.title,
+            content: ball.content,
+            imageUrl: ball.imageUrl,
+            date: ball.date,
+            locationMessage: locationMessage,
+            isUnlocked: ball.isUnlocked,
+            isUnlockable: isUnlockable,
+            onUnlock: () async {
+              try {
+                await FirestoreService.updateCapsuleStatus(
+                  capsuleId: ball.id,
+                  unlockedAt: DateTime.now(),
+                );
+                setState(() {
+                  ball.isUnlocked = true;
+                });
+                Navigator.of(context).pop();
+              } catch (e) {
+                _showError("잠금 해제에 실패했습니다.");
+              }
+            });
       },
     );
   }

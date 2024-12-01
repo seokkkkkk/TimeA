@@ -20,11 +20,8 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await Geolocator.requestPermission();
-  await NaverMapSdk.instance.initialize(
-      clientId: dotenv.env['NAVER_CLIENT_ID'],
-      onAuthFailed: (ex) {
-        print("********* 네이버맵 인증오류 : $ex *********");
-      });
+  await NaverMapSdk.instance
+      .initialize(clientId: dotenv.env['NAVER_CLIENT_ID']);
   runApp(const MainApp());
 }
 

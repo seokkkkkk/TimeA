@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:timea/core/services/firebase_auth_service.dart';
 import 'package:timea/core/services/firestore_service.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
@@ -15,7 +14,6 @@ class ProfileSetupScreen extends StatefulWidget {
 
 class ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _nicknameController = TextEditingController();
-  final FirebaseAuthService _authService = FirebaseAuthService();
 
   // 고정된 프로필 이미지 URL
   final String _profileImageUrl =

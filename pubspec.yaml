@@ -52,6 +52,8 @@ flutter:
         - assets/images/menu-profile-2.svg
         - assets/images/envelope.png
         - assets/config/.env
+        - assets/images/locked-ball.png
+        - assets/images/unlocked-ball.png
 
 flutter_launcher_icons:
     android: true

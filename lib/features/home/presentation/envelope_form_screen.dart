@@ -14,8 +14,10 @@ import 'package:timea/features/map/presentation/map_screen.dart';
 
 class EnvelopeFormScreen extends StatefulWidget {
   final Function(Map<String, dynamic>) onSubmit;
+  final List<Map<String, dynamic>> capsules;
 
-  const EnvelopeFormScreen({super.key, required this.onSubmit});
+  const EnvelopeFormScreen(
+      {super.key, required this.onSubmit, required this.capsules});
 
   @override
   State<EnvelopeFormScreen> createState() => _EnvelopeFormScreenState();
@@ -119,9 +121,13 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(
+              SizedBox(
                 height: 200,
-                child: MapScreen(showAppBar: false),
+                child: MapScreen(
+                  showAppBar: false,
+                  isLoading: false,
+                  capsules: widget.capsules,
+                ),
               ),
               const SizedBox(height: 16),
               Material(
@@ -245,7 +251,7 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                       'canUnlockedAt': openDate!,
                     };
 
-                    await FirestoreService.saveCapsule(
+                    final savedCapsuleId = await FirestoreService.saveCapsule(
                       title: _titleController.text,
                       content: _textContentController.text,
                       imageUrl: imageUrl ?? '',
@@ -256,6 +262,8 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                       userId: userId,
                       canUnlockedAt: openDate!,
                     );
+
+                    capsuleData['id'] = savedCapsuleId;
 
                     widget.onSubmit(capsuleData);
                     Get.offNamed('/home');
