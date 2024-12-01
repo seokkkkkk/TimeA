@@ -78,7 +78,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-// 곧 만날 기억 캡슐
+    // 곧 만날 기억 캡슐
     final soonCapsules = widget.capsules.where((capsule) {
       final unlockDate = (capsule['canUnlockedAt'] as Timestamp).toDate();
       final unlockedAt = (capsule['unlockedAt'] as Timestamp?)?.toDate();

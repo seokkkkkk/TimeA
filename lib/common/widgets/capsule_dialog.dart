@@ -25,9 +25,15 @@ class CapsuleDetailsDialog extends StatelessWidget {
   });
 
   @override
+  //date를 년시분까지만 보여주기 위해 date를 String으로 변환
+
+  @override
   Widget build(BuildContext context) {
+    final String fixedDate = date.toString().substring(0, 16);
     return AlertDialog(
-      title: Text(title),
+      title: Text(
+        '${isUnlocked ? '🔮' : '🔒'} $title',
+      ),
       content: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -40,13 +46,25 @@ class CapsuleDetailsDialog extends StatelessWidget {
               content,
               style: const TextStyle(fontSize: 16),
             ),
-            Text("$date"),
+            const SizedBox(height: 16),
+            Text(fixedDate),
             Text(locationMessage),
-            const Text("잠금 상태: 해제됨"),
           ] else ...[
-            Text("$date"),
+            const Center(
+              child: Icon(
+                Icons.lock,
+                size: 64,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '이 캡슐은 아직 열리지 않았습니다.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            Text(fixedDate),
             Text(locationMessage),
-            const Text("잠금 상태: 잠김"),
           ],
         ],
       ),

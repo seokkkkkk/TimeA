@@ -12,7 +12,8 @@ class CardBuilder extends StatelessWidget {
     required this.calculateDday,
   });
 
-  void _showModal(BuildContext context, String imageUrl, String content) {
+  void _showModal(
+      BuildContext context, String imageUrl, String content, String title) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -24,9 +25,16 @@ class CardBuilder extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               if (imageUrl.isNotEmpty)
                 Image.network(imageUrl, fit: BoxFit.cover),
-              const SizedBox(height: 16),
+              if (imageUrl.isNotEmpty) const SizedBox(height: 8),
               Text(
                 content,
                 style:
@@ -50,11 +58,12 @@ class CardBuilder extends StatelessWidget {
         final isUnlocked = capsule['unlockedAt'] != null;
         final imageUrl = capsule['imageUrl'] ?? '';
         final content = capsule['content'] ?? '';
+        final title = capsule['title'] ?? '';
 
         return GestureDetector(
           onTap: () {
             if (isUnlocked) {
-              _showModal(context, imageUrl, content);
+              _showModal(context, imageUrl, content, title);
             } else {
               showDialog(
                 context: context,

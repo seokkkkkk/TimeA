@@ -54,6 +54,7 @@ flutter:
         - assets/config/.env
         - assets/images/locked-ball.png
         - assets/images/unlocked-ball.png
+        - assets/images/unlockable-ball.png
 
 flutter_launcher_icons:
     android: true
