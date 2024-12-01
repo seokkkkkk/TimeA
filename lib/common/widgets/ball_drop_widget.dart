@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:timea/common/widgets/ball_painter.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:math';
 import 'ball_physics.dart';
+import 'package:timea/common/widgets/ball_painter.dart';
 
 class BallDropWidget extends StatefulWidget {
   final int ballCount;
@@ -20,12 +21,19 @@ class _BallDropWidgetState extends State<BallDropWidget>
   double screenWidth = 0.0;
   double bottomLimit = 0.0;
 
+  // 기울기 데이터 저장
+  double gravityX = 0.0;
+  double gravityY = 1.0;
+
   @override
   void initState() {
     super.initState();
     ballCount = widget.ballCount;
 
     _initializeBalls();
+
+    // 가속도 센서 구독
+    _listenToAccelerometer();
 
     _controller = AnimationController(
       vsync: this,
@@ -36,7 +44,8 @@ class _BallDropWidgetState extends State<BallDropWidget>
       setState(() {
         const deltaTime = 1 / 24;
         for (final ball in _balls) {
-          ball.update(deltaTime, screenWidth, bottomLimit);
+          ball.update(deltaTime, screenWidth, bottomLimit, -gravityX,
+              gravityY); // X축 반전
         }
 
         for (int i = 0; i < _balls.length; i++) {
@@ -44,6 +53,16 @@ class _BallDropWidgetState extends State<BallDropWidget>
             _balls[i].handleCollision(_balls[j]);
           }
         }
+      });
+    });
+  }
+
+  void _listenToAccelerometer() {
+    accelerometerEventStream().listen((event) {
+      setState(() {
+        // 기울기 데이터를 정규화하여 사용
+        gravityX = event.x / 10; // 민감도 조절
+        gravityY = event.y / 10; // 민감도 조절
       });
     });
   }
@@ -56,30 +75,25 @@ class _BallDropWidgetState extends State<BallDropWidget>
   }
 
   void _addNewBall() {
-    final randomOffsetX = (Random().nextDouble() - 0.5) * 50; // x 방향 속도 범위 설정
-    final randomOffsetY =
-        Random().nextDouble() * 50 + 100; // y 방향 속도 범위 설정 (항상 아래쪽)
+    final randomOffsetX = (Random().nextDouble() - 0.5) * 50;
+    final randomOffsetY = Random().nextDouble() * 50 + 100;
 
     final newBall = BallPhysics(
+      id: _balls.length,
       radius: ballRadius,
       position: Offset(
-        Random().nextDouble() * screenWidth, // 화면의 랜덤 위치
-        Random().nextDouble() * 100, // 화면 상단 근처
+        Random().nextDouble() * screenWidth,
+        Random().nextDouble() * 100,
       ),
-      velocity: Offset(randomOffsetX, randomOffsetY), // 아래쪽으로 떨어지도록 초기 속도 설정
+      velocity: Offset(randomOffsetX, randomOffsetY),
+      date: DateTime.now().add(Duration(days: Random().nextInt(7))), // 랜덤 날짜
+      gpsCoordinates: Offset(
+        Random().nextDouble() * 100,
+        Random().nextDouble() * 100,
+      ),
     );
 
     _balls.add(newBall);
-  }
-
-  void _scatterBalls(Offset touchPoint) {
-    for (final ball in _balls) {
-      final direction = (ball.position - touchPoint).normalize();
-      final randomSpeed = Random().nextDouble() * 300 + 100; // 속도 범위 설정
-      final newVelocity = direction * randomSpeed;
-
-      ball.velocity = newVelocity; // 새로운 속도로 업데이트
-    }
   }
 
   @override
@@ -111,5 +125,15 @@ class _BallDropWidgetState extends State<BallDropWidget>
         child: Container(),
       ),
     );
+  }
+
+  void _scatterBalls(Offset touchPoint) {
+    for (final ball in _balls) {
+      final direction = (ball.position - touchPoint).normalize();
+      final randomSpeed = Random().nextDouble() * 300 + 100;
+      final newVelocity = direction * randomSpeed;
+
+      ball.velocity = newVelocity;
+    }
   }
 }

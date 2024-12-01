@@ -2,37 +2,54 @@ import 'dart:math';
 import 'dart:ui';
 
 class BallPhysics {
+  final int id;
   final double radius;
   Offset position;
   Offset velocity;
   double angularVelocity = 0.0; // 각속도
   double rotation;
   final Color color;
+  final DateTime date; // 날짜 속성 추가
+  final Offset gpsCoordinates; // GPS 좌표 속성 추가
+  bool isUnlocked = false; // 잠금 상태
 
-  static const double gravity = 80.0; // 중력 가속도
-  static const double friction = 0.98; // 마찰 계수
-  static const double restitution = 0.8; // 반발 계수
-  static const double maxVelocity = 500.0; // 최대 속도 제한
+  // 기존 상수 정의는 유지
+  static const double baseGravity = 80.0;
+  static const double friction = 0.98;
+  static const double restitution = 0.8;
+  static const double maxVelocity = 500.0;
 
   BallPhysics._internal({
+    required this.id,
     required this.radius,
     required this.position,
     required this.velocity,
     required this.rotation,
     required this.color,
+    required this.date,
+    required this.gpsCoordinates,
+    required this.isUnlocked,
   });
 
   factory BallPhysics({
+    required int id,
     required double radius,
     required Offset position,
     required Offset velocity,
+    required DateTime date,
+    required Offset gpsCoordinates,
+    bool isUnlocked = false,
   }) {
     return BallPhysics._internal(
+      id: id,
       radius: radius,
       position: position,
       velocity: velocity,
       rotation: Random().nextDouble() * 2 * pi,
       color: _getRandomColor(),
+      date: date,
+      gpsCoordinates: gpsCoordinates,
+      isUnlocked: isUnlocked,
     );
   }
 
@@ -44,13 +61,21 @@ class BallPhysics {
       Color(0xFFFFD8C2),
       Color(0xFFD9D9D9),
     ];
-    final random = Random();
-    return predefinedColors[random.nextInt(predefinedColors.length)];
+    return predefinedColors[Random().nextInt(predefinedColors.length)];
   }
 
-  void update(double deltaTime, double screenWidth, double bottomLimit) {
-    // 중력 적용
-    velocity = Offset(velocity.dx, velocity.dy + gravity * deltaTime);
+  void update(
+    double deltaTime,
+    double screenWidth,
+    double bottomLimit,
+    double gravityX,
+    double gravityY,
+  ) {
+    // 기울기에 따른 중력 방향 적용
+    velocity = Offset(
+      velocity.dx + gravityX * baseGravity * deltaTime,
+      velocity.dy + gravityY * baseGravity * deltaTime,
+    );
 
     // 속도 제한
     velocity = Offset(

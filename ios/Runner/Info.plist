@@ -68,5 +68,7 @@
 	<string>음성 녹음 및 관련 기능을 사용하기 위해 마이크 접근 권한이 필요합니다.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>사진을 선택하고 업로드하기 위해 사진 라이브러리 접근 권한이 필요합니다.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>모션 및 관련 기능을 사용하기 위해 모션 및 가속도 센서 접근 권한이 필요합니다.</string>
 </dict>
 </plist>
