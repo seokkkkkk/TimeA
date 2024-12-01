@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
@@ -18,7 +19,16 @@ class LoginScreen extends StatelessWidget {
     try {
       UserCredential userCredential = await _authService.signInWithGoogle();
       if (userCredential.user != null) {
-        Get.offAllNamed('/');
+        User? currentUser = userCredential.user;
+        DocumentSnapshot userDoc =
+            await _authService.getUserFromFirestore(currentUser!.uid);
+
+        // 사용자 정보가 없다면 프로필 설정 페이지로 이동
+        if (!userDoc.exists) {
+          Get.toNamed('/profileSetup'); // 닉네임 및 프로필 설정 페이지로 이동
+        } else {
+          Get.offAllNamed('/');
+        }
       }
     } catch (e) {
       SnackbarUtil.showError('Google 로그인 실패', e.toString());
@@ -37,7 +47,16 @@ class LoginScreen extends StatelessWidget {
     try {
       UserCredential userCredential = await _authService.signInAnonymously();
       if (userCredential.user != null) {
-        Get.offAllNamed('/');
+        User? currentUser = userCredential.user;
+        DocumentSnapshot userDoc =
+            await _authService.getUserFromFirestore(currentUser!.uid);
+
+        // 사용자 정보가 없다면 프로필 설정 페이지로 이동
+        if (!userDoc.exists) {
+          Get.toNamed('/profileSetup'); // 닉네임 및 프로필 설정 페이지로 이동
+        } else {
+          Get.offAllNamed('/');
+        }
       }
     } catch (e) {
       SnackbarUtil.showError('Guest 로그인 실패', e.toString());

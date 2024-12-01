@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
 import 'package:simple_shadow/simple_shadow.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:timea/core/services/firebase_auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,6 +13,8 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  final FirebaseAuthService _authService = FirebaseAuthService();
+
   @override
   void initState() {
     super.initState();
@@ -20,12 +24,23 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _initializeApp() async {
     User? user = FirebaseAuth.instance.currentUser;
 
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 2)); // 스플래시 지연 시간
 
     if (user == null) {
+      // 로그인 페이지로 이동
       Get.offAllNamed('/login');
     } else {
-      Get.offAllNamed('/');
+      // Firestore에서 사용자 데이터 확인
+      DocumentSnapshot userDoc =
+          await _authService.getUserFromFirestore(user.uid);
+
+      if (!userDoc.exists) {
+        // 프로필 설정 페이지로 이동
+        Get.offAllNamed('/profileSetup');
+      } else {
+        // 홈 화면으로 이동
+        Get.offAllNamed('/');
+      }
     }
   }
 
@@ -49,6 +64,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 height: 240,
               ),
             ),
+            const SizedBox(height: 16),
+            const CircularProgressIndicator(), // 로딩 인디케이터 추가
           ],
         ),
       ),
