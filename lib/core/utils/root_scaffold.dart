@@ -26,7 +26,7 @@ class _RootScaffoldState extends State<RootScaffold> {
     Get.put(TimeNavigtaionBarController());
   }
 
-  Future<void> _loadCapsules() async {
+  Future<List<Map<String, dynamic>>> _loadCapsules() async {
     try {
       final data = await FirestoreService.getAllCapsules();
       setState(() {
@@ -39,6 +39,7 @@ class _RootScaffoldState extends State<RootScaffold> {
       });
       _showError('캡슐 데이터 로드 실패: $e');
     }
+    return capsules;
   }
 
   void _addCapsule(Map<String, dynamic> newCapsule) {
@@ -74,6 +75,7 @@ class _RootScaffoldState extends State<RootScaffold> {
         capsules: capsules,
         isLoading: isLoading,
         onAddCapsule: _addCapsule,
+        loadCapsules: _loadCapsules,
       ),
       ProfileScreen(
         capsules: capsules,

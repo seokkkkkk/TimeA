@@ -68,17 +68,9 @@ class LoginScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-      ),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 60),
+          padding: const EdgeInsets.fromLTRB(16, 120, 16, 60),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             mainAxisSize: MainAxisSize.max,

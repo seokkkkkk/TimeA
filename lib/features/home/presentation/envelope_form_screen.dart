@@ -183,7 +183,7 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                       openDate != null
                           ? DateFormat('yyyy년 MM월 dd일 - HH시 mm분')
                               .format(openDate!)
-                          : '개봉 날짜를 선택하세요.',
+                          : '돌아오는 날짜를 선택하세요.',
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),

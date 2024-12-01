@@ -7,11 +7,13 @@ class HomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> capsules;
   final bool isLoading;
   final Function(Map<String, dynamic>) onAddCapsule;
+  final Function() loadCapsules;
   const HomeScreen({
     super.key,
     required this.capsules,
     required this.isLoading,
     required this.onAddCapsule,
+    required this.loadCapsules,
   });
 
   @override
@@ -60,7 +62,7 @@ class HomeScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '텅 빈 캡슐이 기다리고 있어요.\n당신의 이야기를 담아주세요. 💌',
+                      '기억 박스가 비어 있어요.\n당신의 이야기를 담아주세요. 💌',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 16,
@@ -79,6 +81,7 @@ class HomeScreen extends StatelessWidget {
                 ))
               : BallDropWidget(
                   capsules: capsules,
+                  loadCapsules: loadCapsules,
                 ),
     );
   }

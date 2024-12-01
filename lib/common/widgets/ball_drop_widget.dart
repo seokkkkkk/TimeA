@@ -13,7 +13,9 @@ import 'package:timea/common/widgets/ball_painter.dart';
 
 class BallDropWidget extends StatefulWidget {
   final List<Map<String, dynamic>> capsules;
-  const BallDropWidget({super.key, required this.capsules});
+  final Function loadCapsules;
+  const BallDropWidget(
+      {super.key, required this.capsules, required this.loadCapsules});
 
   @override
   State<BallDropWidget> createState() => _BallDropWidgetState();
@@ -248,9 +250,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
                   capsuleId: ball.id,
                   unlockedAt: DateTime.now(),
                 );
-                setState(() {
-                  ball.isUnlocked = true;
-                });
+                _initializeBalls(await widget.loadCapsules());
                 Navigator.of(context).pop();
               } catch (e) {
                 _showError("잠금 해제에 실패했습니다.");

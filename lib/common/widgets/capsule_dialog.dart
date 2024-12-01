@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
-import 'package:timea/core/utils/root_scaffold.dart';
 
 class CapsuleDetailsDialog extends StatelessWidget {
   final String title;
@@ -71,11 +70,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
       actions: [
         if (!isUnlocked)
           TextButton(
-            onPressed: isUnlockable
-                ? onUnlock
-                : () {
-                    SnackbarUtil.showInfo('잠금 해제 불가', '잠금 해제 조건을 확인해주세요.');
-                  },
+            onPressed: isUnlockable ? onUnlock : onUnlock,
             style: ButtonStyle(
               backgroundColor: WidgetStateProperty.resolveWith<Color?>(
                 (states) =>
