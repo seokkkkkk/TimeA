@@ -42,7 +42,7 @@ Flutter를 사용해 개발되었으며, Firebase를 활용하였습니다.
 ### **설치 및 실행**
 1. 이 레포지토리를 클론합니다.
     ```bash
-    git clone https://github.com/<your-repository>/time-and.git
+    git clone https://github.com/seokkkkkk/TimeA.git
     ```
 2. Flutter 환경을 설정하고 프로젝트를 실행합니다.
     ```bash
