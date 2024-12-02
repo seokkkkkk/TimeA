@@ -29,7 +29,6 @@ class HomeScreen extends StatelessWidget {
             builder: (context) => EnvelopeFormScreen(
               capsules: capsules,
               onSubmit: (newCapsule) {
-                Navigator.of(context).pop(); // 이전 화면으로 돌아가기
                 onAddCapsule(newCapsule); // 새로운 캡슐 추가
               },
             ),

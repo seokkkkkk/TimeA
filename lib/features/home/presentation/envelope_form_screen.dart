@@ -1,13 +1,12 @@
 import 'dart:io';
-import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:timea/common/widgets/app_bar.dart';
+import 'package:timea/common/widgets/envelope_animation.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
 import 'package:timea/core/services/firebase_auth_service.dart';
@@ -111,6 +110,8 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isSubmitting = false;
+
     final FirebaseAuthService authService = FirebaseAuthService();
     return Scaffold(
       appBar: const TimeAppBar(
@@ -129,6 +130,8 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                   showAppBar: false,
                   isLoading: false,
                   capsules: widget.capsules,
+                  loadCapsules: () {},
+                  isClickable: false,
                 ),
               ),
               const SizedBox(height: 16),
@@ -225,11 +228,15 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () async {
+                  if (isSubmitting) return;
                   if (_titleController.text.isNotEmpty &&
                       (_textContentController.text.isNotEmpty ||
                           image != null) &&
                       openDate != null &&
                       _geolocationController.currentPosition.value != null) {
+                    setState(() {
+                      isSubmitting = true;
+                    });
                     final String? userId = authService.auth.currentUser?.uid;
 
                     if (userId == null) {
@@ -245,7 +252,7 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                       'title': _titleController.text,
                       'content': _textContentController.text,
                       'image': imageUrl ?? '',
-                      'location': Point(
+                      'location': GeoPoint(
                         _geolocationController.currentPosition.value!.latitude,
                         _geolocationController.currentPosition.value!.longitude,
                       ),
@@ -268,7 +275,8 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                     capsuleData['id'] = savedCapsuleId;
 
                     widget.onSubmit(capsuleData);
-                    Get.offNamed('/home');
+
+                    Get.to(() => const EnvelopeAnimation());
                   } else {
                     SnackbarUtil.showInfo(
                       '내용 입력 필요',

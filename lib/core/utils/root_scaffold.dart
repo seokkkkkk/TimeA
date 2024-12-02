@@ -70,6 +70,7 @@ class _RootScaffoldState extends State<RootScaffold> {
       MapScreen(
         capsules: capsules,
         isLoading: isLoading,
+        loadCapsules: _loadCapsules,
       ),
       HomeScreen(
         capsules: capsules,

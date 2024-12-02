@@ -5,18 +5,24 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/common/widgets/capsule_dialog.dart';
+import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
+import 'package:timea/core/services/firestore_service.dart';
 
 class MapScreen extends StatefulWidget {
   final bool showAppBar;
   final bool isLoading;
   final List<Map<String, dynamic>> capsules;
+  final Function() loadCapsules;
+  final bool isClickable;
 
   const MapScreen({
     super.key,
     this.showAppBar = true,
     this.isLoading = false,
     this.capsules = const [],
+    required this.loadCapsules,
+    this.isClickable = true,
   });
 
   @override
@@ -89,9 +95,11 @@ class MapScreenState extends State<MapScreen> {
           size: const Size(30, 30),
         );
 
-        marker.setOnTapListener((overlay) {
-          showCapsuleDetails(capsule);
-        });
+        if (widget.isClickable) {
+          marker.setOnTapListener((overlay) {
+            showCapsuleDetails(capsule);
+          });
+        }
 
         _mapController?.addOverlay(marker);
       }
@@ -159,6 +167,25 @@ class MapScreenState extends State<MapScreen> {
           locationMessage: '',
           isUnlocked: isUnlocked,
           isUnlockable: isUnlockable,
+          onUnlock: () async {
+            try {
+              await FirestoreService.updateCapsuleStatus(
+                capsuleId: capsule['id'],
+                unlockedAt: DateTime.now(),
+              );
+              setState(() {
+                capsule['unlockedAt'] = Timestamp.fromDate(DateTime.now());
+              });
+              if (_mapController != null) {
+                setState(() {
+                  _mapController?.clearOverlays(); // 기존 오버레이 제거
+                  addCapsuleOverlays(); // 새롭게 그리기
+                });
+              }
+            } catch (e) {
+              SnackbarUtil.showError('잠금 해제 실패', '잠금 해제에 실패했습니다.');
+            }
+          },
         );
       },
     );

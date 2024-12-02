@@ -251,7 +251,6 @@ class _BallDropWidgetState extends State<BallDropWidget>
                   unlockedAt: DateTime.now(),
                 );
                 _initializeBalls(await widget.loadCapsules());
-                Navigator.of(context).pop();
               } catch (e) {
                 _showError("잠금 해제에 실패했습니다.");
               }

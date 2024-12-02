@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:timea/common/widgets/capsule_animation.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
 
 class CapsuleDetailsDialog extends StatelessWidget {
@@ -22,9 +24,6 @@ class CapsuleDetailsDialog extends StatelessWidget {
     required this.isUnlockable,
     this.onUnlock,
   });
-
-  @override
-  //date를 년시분까지만 보여주기 위해 date를 String으로 변환
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +70,10 @@ class CapsuleDetailsDialog extends StatelessWidget {
         if (!isUnlocked)
           TextButton(
             onPressed: isUnlockable
-                ? onUnlock
+                ? () {
+                    onUnlock?.call();
+                    Get.to(() => const CapsuleAnimation());
+                  }
                 : () {
                     SnackbarUtil.showInfo(
                       '잠금 해제 불가',

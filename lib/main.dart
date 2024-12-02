@@ -4,6 +4,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/route_manager.dart';
+import 'package:timea/common/widgets/capsule_animation.dart';
+import 'package:timea/common/widgets/envelope_animation.dart';
 import 'package:timea/core/utils/root_scaffold.dart';
 import 'package:timea/core/utils/root_scaffold_binding.dart';
 import 'package:timea/core/utils/theme.dart';
@@ -43,6 +45,8 @@ class MainApp extends StatelessWidget {
         GetPage(name: '/', page: () => const RootScaffold()),
         GetPage(name: '/notification', page: () => const NotificationScreen()),
         GetPage(name: '/profileSetup', page: () => const ProfileSetupScreen()),
+        GetPage(
+            name: '/envelopAnimation', page: () => const EnvelopeAnimation())
       ],
     );
   }
