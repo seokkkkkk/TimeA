@@ -33,7 +33,6 @@ class _BallDropWidgetState extends State<BallDropWidget>
   double bottomLimit = 0.0;
   double topLimit = 0.0;
 
-  StreamSubscription<MagnetometerEvent>? _magnetometerSubscription;
   StreamSubscription? _accelerometerSubscription;
 
   // 기울기 데이터 저장
@@ -42,7 +41,6 @@ class _BallDropWidgetState extends State<BallDropWidget>
 
   // GPS 및 방향 데이터
   Position? get currentPosition => geolocationController.currentPosition.value;
-  double? heading;
 
   @override
   void initState() {
@@ -54,8 +52,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
     // 가속도 센서 구독
     _listenToAccelerometer();
 
-    // 방향 정보 추적
-    _trackHeading();
+    _listenToLocationStream();
 
     _controller = AnimationController(
       vsync: this,
@@ -77,6 +74,23 @@ class _BallDropWidgetState extends State<BallDropWidget>
           }
         }
       });
+    });
+  }
+
+  void _listenToLocationStream() {
+    geolocationController.startLocationStream();
+
+    geolocationController.positionStream.value = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.best,
+        distanceFilter: 5, // 최소 거리 필터
+      ),
+    ).listen((position) {
+      final userOffset = Offset(position.longitude, position.latitude);
+      for (final ball in _balls) {
+        ball.updateUserPosition(userOffset);
+      }
+      setState(() {});
     });
   }
 
@@ -108,6 +122,10 @@ class _BallDropWidgetState extends State<BallDropWidget>
       imageUrl: capsule['imageUrl'] ?? '',
       radius: ballRadius,
       isUnlocked: capsule['unlockedAt'] != null,
+      userPosition: Offset(
+        currentPosition?.longitude ?? 0,
+        currentPosition?.latitude ?? 0,
+      ),
       position: Offset(
         Random().nextDouble() * screenWidth,
         Random().nextDouble() * 100,
@@ -133,50 +151,10 @@ class _BallDropWidgetState extends State<BallDropWidget>
     topLimit = 0;
   }
 
-  void _trackHeading() {
-    double magX = 0.0, magY = 0.0, magZ = 0.0;
-    double accX = 0.0, accY = 0.0, accZ = 0.0;
-
-    _magnetometerSubscription = magnetometerEventStream().listen((event) {
-      magX = event.x;
-      magY = event.y;
-      magZ = event.z;
-
-      if (accX != 0.0 || accY != 0.0 || accZ != 0.0) {
-        final correctedHeading =
-            _calculateCorrectedHeading(magX, magY, magZ, accX, accY, accZ);
-        if (!mounted) return;
-        setState(() {
-          heading = correctedHeading;
-        });
-      }
-    });
-
-    accelerometerEventStream().listen((event) {
-      accX = event.x;
-      accY = event.y;
-      accZ = event.z;
-    });
-  }
-
-  double _calculateCorrectedHeading(double magX, double magY, double magZ,
-      double accX, double accY, double accZ) {
-    final roll = atan2(accY, accZ);
-    final pitch = atan(-accX / sqrt(accY * accY + accZ * accZ));
-
-    final correctedX = magX * cos(pitch) + magZ * sin(pitch);
-    final correctedY = magX * sin(roll) * sin(pitch) +
-        magY * cos(roll) -
-        magZ * sin(roll) * cos(pitch);
-
-    return (atan2(correctedY, correctedX) * (180 / pi) + 360) % 360;
-  }
-
   @override
   void dispose() {
     _controller.stop();
     _controller.dispose();
-    _magnetometerSubscription?.cancel();
     _accelerometerSubscription?.cancel();
     geolocationController.positionStream.value?.cancel();
     super.dispose();
@@ -215,7 +193,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
   }
 
   void _showBallDetails(BallPhysics ball) {
-    final canProvideLocation = currentPosition != null && heading != null;
+    final canProvideLocation = currentPosition != null;
 
     late final String? locationDifference;
     late final String locationMessage;
@@ -260,35 +238,29 @@ class _BallDropWidgetState extends State<BallDropWidget>
   }
 
   String? calculateLocationDifference(Offset ballCoordinates) {
-    if (currentPosition == null || heading == null) return null;
-
-    final dx = ballCoordinates.dx - currentPosition!.longitude;
-    final dy = ballCoordinates.dy - currentPosition!.latitude;
-    final distance = sqrt(dx * dx + dy * dy) * 111000;
+    if (currentPosition == null) {
+      return null;
+    }
+    final distance = Geolocator.distanceBetween(
+      currentPosition!.latitude,
+      currentPosition!.longitude,
+      ballCoordinates.dy,
+      ballCoordinates.dx,
+    );
 
     if (distance <= 25) {
       return '기억 캡슐의 위치입니다.';
     }
 
-    final angleToTarget = atan2(dy, dx) * 180 / pi;
-    final relativeAngle = ((angleToTarget - heading!) + 360) % 360;
+    final direction = Geolocator.bearingBetween(
+      currentPosition!.latitude,
+      currentPosition!.longitude,
+      ballCoordinates.dy,
+      ballCoordinates.dx,
+    );
 
-    String direction;
-    if (relativeAngle >= 0 && relativeAngle < 45 || relativeAngle >= 315) {
-      direction = '앞쪽';
-    } else if (relativeAngle >= 45 && relativeAngle < 135) {
-      direction = '오른쪽';
-    } else if (relativeAngle >= 135 && relativeAngle < 225) {
-      direction = '뒤쪽';
-    } else {
-      direction = '왼쪽';
-    }
-
-    if (distance >= 1000) {
-      return '$direction으로 ${(distance / 1000).toStringAsFixed(1)}km';
-    }
-
-    return '$direction으로 ${distance.toStringAsFixed(1)}m';
+    print('Distance: $distance, Direction: $direction');
+    return '거리 ${distance.floor()}m 방향: (${direction.floor()}°)';
   }
 
   void _showError(String message) {

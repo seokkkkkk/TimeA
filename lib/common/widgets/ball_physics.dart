@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:geolocator/geolocator.dart';
+
 class BallPhysics {
   final String id;
   final String title;
@@ -11,10 +13,11 @@ class BallPhysics {
   Offset velocity;
   double angularVelocity = 0.0; // 각속도
   double rotation;
-  final Color color;
+  Color color;
   final DateTime date; // 날짜 속성 추가
   final Offset gpsCoordinates; // GPS 좌표 속성 추가
   bool isUnlocked; // 잠금 해제 여부 속성 추가
+  Offset userPosition;
 
   // 기존 상수 정의는 유지
   static const double baseGravity = 80.0;
@@ -35,6 +38,7 @@ class BallPhysics {
     required this.date,
     required this.gpsCoordinates,
     required this.isUnlocked,
+    required this.userPosition,
   });
 
   factory BallPhysics({
@@ -48,6 +52,7 @@ class BallPhysics {
     required DateTime date,
     required Offset gpsCoordinates,
     required bool isUnlocked,
+    required Offset userPosition,
   }) {
     return BallPhysics._internal(
       id: id,
@@ -62,11 +67,23 @@ class BallPhysics {
         isUnlocked: isUnlocked,
         date: date,
         gpsCoordinates: gpsCoordinates,
-        currentPosition: position,
+        currentPosition: userPosition,
       ),
       date: date,
       gpsCoordinates: gpsCoordinates,
       isUnlocked: isUnlocked,
+      userPosition: userPosition,
+    );
+  }
+
+  // 사용자 위치 업데이트 메서드
+  void updateUserPosition(Offset newUserPosition) {
+    userPosition = newUserPosition;
+    color = _getColor(
+      isUnlocked: isUnlocked,
+      date: date,
+      gpsCoordinates: gpsCoordinates,
+      currentPosition: userPosition,
     );
   }
 
@@ -85,23 +102,23 @@ class BallPhysics {
     ];
 
     // 거리 계산 (GPS 좌표 간 거리)
-    double distance = (gpsCoordinates - currentPosition).distance *
-        111000; // Offset 거리 -> 미터 변환
+    double distance = Geolocator.distanceBetween(
+      currentPosition.dy,
+      currentPosition.dx,
+      gpsCoordinates.dy,
+      gpsCoordinates.dx,
+    );
 
     if (isUnlocked) {
       return predefinedColors[0]; // Unlocked 상태
     } else if (date.isBefore(DateTime.now())) {
       if (distance <= 25) {
-        return predefinedColors[1]; // Date 이전 + GPS 일치
+        return predefinedColors[2]; // Date 이전 + GPS 일치
       } else {
-        return predefinedColors[2]; // Date 이전 + GPS 불일치
+        return predefinedColors[3]; // Date 이전 + GPS 불일치
       }
     } else {
-      if (distance <= 25) {
-        return predefinedColors[3]; // Date 이후 + GPS 일치
-      } else {
-        return predefinedColors[4]; // Date 이후 + GPS 불일치
-      }
+      return predefinedColors[4]; // Date 이후
     }
   }
 

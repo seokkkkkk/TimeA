@@ -72,6 +72,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
             onPressed: isUnlockable
                 ? () {
                     onUnlock?.call();
+                    Navigator.of(context).pop();
                     Get.to(() => const CapsuleAnimation());
                   }
                 : () {

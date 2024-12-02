@@ -53,7 +53,6 @@ class CapsuleAnimationState extends State<CapsuleAnimation>
         Future.delayed(const Duration(seconds: 5), () {
           if (mounted) {
             Navigator.pop(context);
-            Navigator.pop(context);
           }
         });
 

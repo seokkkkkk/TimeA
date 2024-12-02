@@ -134,6 +134,10 @@ class MapScreenState extends State<MapScreen> {
       return false;
     }
 
+    print(
+        'Current position: ${currentPosition.latitude}, ${currentPosition.longitude}');
+    print('Capsule position: $latitude, $longitude');
+
     final distance = Geolocator.distanceBetween(
       currentPosition.latitude,
       currentPosition.longitude,
@@ -141,7 +145,9 @@ class MapScreenState extends State<MapScreen> {
       longitude,
     );
 
-    return distance < 25; // 100m 이내에 있을 때만 언락 가능
+    print('Distance: $distance');
+
+    return distance <= 25; // 25m 이내에 있을 때만 언락 가능
   }
 
   void showCapsuleDetails(Map<String, dynamic> capsule) {
