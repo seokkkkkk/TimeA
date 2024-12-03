@@ -1,10 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/route_manager.dart';
-import 'package:timea/common/widgets/capsule_animation.dart';
 import 'package:timea/common/widgets/envelope_animation.dart';
 import 'package:timea/core/utils/root_scaffold.dart';
 import 'package:timea/core/utils/root_scaffold_binding.dart';
@@ -22,8 +20,6 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await Geolocator.requestPermission();
-  await NaverMapSdk.instance
-      .initialize(clientId: dotenv.env['NAVER_CLIENT_ID']);
   runApp(const MainApp());
 }
 

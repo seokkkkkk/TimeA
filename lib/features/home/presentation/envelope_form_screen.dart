@@ -124,15 +124,9 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
+              const SizedBox(
                 height: 200,
-                child: MapScreen(
-                  showAppBar: false,
-                  isLoading: false,
-                  capsules: widget.capsules,
-                  loadCapsules: () {},
-                  isClickable: false,
-                ),
+                child: MapScreen(),
               ),
               const SizedBox(height: 16),
               Material(

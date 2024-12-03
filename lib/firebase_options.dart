@@ -41,48 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyATcvoTri9CBcX4RMQgR-Hjx3huWvBuePo',
-    appId: '1:1086087840408:web:f2f85ab31ab0fcfaf686ed',
-    messagingSenderId: '1086087840408',
-    projectId: 'timea-c2ab4',
-    authDomain: 'timea-c2ab4.firebaseapp.com',
-    storageBucket: 'timea-c2ab4.firebasestorage.app',
-    measurementId: 'G-Z7XTDXDSDN',
+    apiKey: 'AIzaSyCBtKMX9ao_LFiNeynlg4fkgfmUZRDoncQ',
+    appId: '1:307660930243:web:303b424650a0637ae7f676',
+    messagingSenderId: '307660930243',
+    projectId: 'time-a-42e3d',
+    authDomain: 'time-a-42e3d.firebaseapp.com',
+    storageBucket: 'time-a-42e3d.firebasestorage.app',
+    measurementId: 'G-T1BK7294MB',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyANxktwCRVEu7_0eItDiEnV7r_R53zZ7Tw',
-    appId: '1:1086087840408:android:6219809b8cbe38cdf686ed',
-    messagingSenderId: '1086087840408',
-    projectId: 'timea-c2ab4',
-    storageBucket: 'timea-c2ab4.firebasestorage.app',
+    apiKey: 'AIzaSyCndtSHXGbIlUnTU-ZGg7T_scUI527h0e8',
+    appId: '1:307660930243:android:38462c11363f396ce7f676',
+    messagingSenderId: '307660930243',
+    projectId: 'time-a-42e3d',
+    storageBucket: 'time-a-42e3d.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCa2Td_8ViDkjYJYj7nsfvuudoziHwaWrQ',
-    appId: '1:1086087840408:ios:4e9c4737241038d9f686ed',
-    messagingSenderId: '1086087840408',
-    projectId: 'timea-c2ab4',
-    storageBucket: 'timea-c2ab4.firebasestorage.app',
-    iosBundleId: 'com.example.timea',
+    apiKey: 'AIzaSyCoDlJZXsas6D1zQCyGgto-Ag-4zByuCGY',
+    appId: '1:307660930243:ios:9e402da6e9686fcfe7f676',
+    messagingSenderId: '307660930243',
+    projectId: 'time-a-42e3d',
+    storageBucket: 'time-a-42e3d.firebasestorage.app',
+    iosBundleId: 'com.timea.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCa2Td_8ViDkjYJYj7nsfvuudoziHwaWrQ',
-    appId: '1:1086087840408:ios:4e9c4737241038d9f686ed',
-    messagingSenderId: '1086087840408',
-    projectId: 'timea-c2ab4',
-    storageBucket: 'timea-c2ab4.firebasestorage.app',
-    iosBundleId: 'com.example.timea',
+    apiKey: 'AIzaSyCoDlJZXsas6D1zQCyGgto-Ag-4zByuCGY',
+    appId: '1:307660930243:ios:9e402da6e9686fcfe7f676',
+    messagingSenderId: '307660930243',
+    projectId: 'time-a-42e3d',
+    storageBucket: 'time-a-42e3d.firebasestorage.app',
+    iosBundleId: 'com.timea.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyATcvoTri9CBcX4RMQgR-Hjx3huWvBuePo',
-    appId: '1:1086087840408:web:e7938e572fe7d599f686ed',
-    messagingSenderId: '1086087840408',
-    projectId: 'timea-c2ab4',
-    authDomain: 'timea-c2ab4.firebaseapp.com',
-    storageBucket: 'timea-c2ab4.firebasestorage.app',
-    measurementId: 'G-DERK4J1HNV',
+    apiKey: 'AIzaSyCBtKMX9ao_LFiNeynlg4fkgfmUZRDoncQ',
+    appId: '1:307660930243:web:9ac34829a389eabde7f676',
+    messagingSenderId: '307660930243',
+    projectId: 'time-a-42e3d',
+    authDomain: 'time-a-42e3d.firebaseapp.com',
+    storageBucket: 'time-a-42e3d.firebasestorage.app',
+    measurementId: 'G-J8NRN4NB6D',
   );
+
 }
