@@ -67,7 +67,10 @@ class _RootScaffoldState extends State<RootScaffold> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const MapScreen(),
+      MapScreen(
+        capsules: capsules,
+        isLoading: isLoading,
+      ),
       HomeScreen(
         capsules: capsules,
         isLoading: isLoading,

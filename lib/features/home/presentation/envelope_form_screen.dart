@@ -195,7 +195,12 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 200, child: MapScreen()),
+              SizedBox(
+                  height: 200,
+                  child: MapScreen(
+                    capsules: widget.capsules,
+                    isLoading: true,
+                  )),
               const SizedBox(height: 16),
               _buildInputField(_titleController, '제목'),
               const SizedBox(height: 16),

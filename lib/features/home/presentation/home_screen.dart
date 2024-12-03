@@ -23,6 +23,7 @@ class HomeScreen extends StatelessWidget {
         title: '기억 상자',
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFFFFF4E0),
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(

@@ -25,6 +25,7 @@ dependencies:
     cloud_firestore: ^5.5.0
     firebase_storage: ^12.3.6
     flutter_compass: ^0.8.1
+    google_maps_flutter: ^2.10.0
 
 dev_dependencies:
     flutter_test:
@@ -51,7 +52,7 @@ flutter:
         - assets/images/menu-profile-1.svg
         - assets/images/menu-profile-2.svg
         - assets/images/envelope.png
-        - assets/config/.env
+        - .env
         - assets/images/locked-ball.png
         - assets/images/unlocked-ball.png
         - assets/images/unlockable-ball.png

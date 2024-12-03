@@ -88,6 +88,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
         distanceFilter: 3, // 최소 거리 필터
       ),
     ).listen((position) {
+      if (!mounted) return;
       final userOffset = Offset(position.longitude, position.latitude);
       for (final ball in _balls) {
         ball.updateUserPosition(userOffset);
@@ -237,7 +238,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
             isUnlocked: ball.isUnlocked,
             isUnlockable: !ball.isUnlocked &&
                 ball.date.isBefore(DateTime.now()) &&
-                locationMessage.value == '기억 캡슐의 위치입니다.',
+                locationMessage.value == '기억 캡슐이 근처에 있습니다.',
             onUnlock: () async {
               try {
                 await FirestoreService.updateCapsuleStatus(
@@ -279,7 +280,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
     );
 
     if (distance <= 5) {
-      return '기억 캡슐의 위치입니다.';
+      return '기억 캡슐이 근처에 있습니다.';
     }
 
     // 방위각 계산
