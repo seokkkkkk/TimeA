@@ -196,7 +196,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
   }
 
   void _showBallDetails(BallPhysics ball) {
-    final locationMessage = ''.obs; // RxString 생성
+    final RxString locationMessage = ''.obs; // RxString 생성
 
     // 초기 메시지 설정
     if (currentPosition != null) {
@@ -234,11 +234,12 @@ class _BallDropWidgetState extends State<BallDropWidget>
             content: ball.isUnlocked ? ball.content : null,
             imageUrl: ball.isUnlocked ? ball.imageUrl : null,
             date: ball.date,
-            locationMessage: locationMessage, // 실시간 업데이트
+            locationMessage: locationMessage, // 명확한 .value 참조
+            locationString: locationMessage.value,
             isUnlocked: ball.isUnlocked,
             isUnlockable: !ball.isUnlocked &&
                 ball.date.isBefore(DateTime.now()) &&
-                locationMessage.value == '기억 캡슐이 근처에 있습니다.',
+                locationMessage.value.contains('기억 캡슐이 근처에 있습니다.'),
             onUnlock: () async {
               try {
                 await FirestoreService.updateCapsuleStatus(

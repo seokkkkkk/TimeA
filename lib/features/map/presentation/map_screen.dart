@@ -288,15 +288,15 @@ class _MapScreenState extends State<MapScreen> {
       context: context,
       builder: (context) {
         return Obx(() {
+          RxString locationMessage = _getMarkerDescription(capsule['location']);
           return CapsuleDetailsDialog(
             title: capsule['title'],
             content: capsule['unlockedAt'] != null ? capsule['content'] : null,
             imageUrl:
                 capsule['unlockedAt'] != null ? capsule['imageUrl'] : null,
             date: capsule['canUnlockedAt'].toDate(),
-            locationMessage: _getMarkerDescription(
-              capsule['location'],
-            ),
+            locationMessage: locationMessage,
+            locationString: locationMessage.value,
             isUnlocked: capsule['unlockedAt'] != null,
             isUnlockable: (capsule['unlockedAt'] == null) &&
                 capsule['canUnlockedAt'].toDate().isBefore(DateTime.now()) &&
@@ -309,7 +309,6 @@ class _MapScreenState extends State<MapScreen> {
                   capsuleId: capsule['id'],
                   unlockedAt: DateTime.now(),
                 );
-                _generateMarkerIcons();
               } catch (e) {
                 Get.snackbar('오류', '기억 캡슐을 열 수 없습니다.');
               }

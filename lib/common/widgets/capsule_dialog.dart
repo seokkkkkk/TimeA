@@ -9,6 +9,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
   final String? imageUrl;
   final DateTime date;
   final RxString locationMessage; // RxString으로 변경
+  final String locationString;
   final bool isUnlocked;
   final bool isUnlockable;
   final VoidCallback? onUnlock;
@@ -20,6 +21,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
     this.imageUrl,
     required this.date,
     required this.locationMessage,
+    required this.locationString,
     required this.isUnlocked,
     required this.isUnlockable,
     this.onUnlock,
@@ -38,7 +40,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (isUnlocked && imageUrl != null && imageUrl!.isNotEmpty) ...[
+          if (isUnlocked && (imageUrl != null) && imageUrl!.isNotEmpty) ...[
             Column(
               children: [
                 Image.network(
@@ -65,7 +67,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
                 const SizedBox(height: 8),
               ],
             ),
-            if (content != null && content!.isNotEmpty) ...[
+            if ((content != null) && content!.isNotEmpty) ...[
               Text(
                 content!,
                 style: const TextStyle(fontSize: 16),
