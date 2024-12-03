@@ -2,7 +2,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/route_manager.dart';
-import 'package:timea/common/widgets/envelope_animation.dart';
 import 'package:timea/core/utils/root_scaffold.dart';
 import 'package:timea/core/utils/root_scaffold_binding.dart';
 import 'package:timea/core/utils/theme.dart';

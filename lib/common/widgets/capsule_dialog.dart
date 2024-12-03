@@ -8,7 +8,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
   final String? content;
   final String? imageUrl;
   final DateTime date;
-  final String locationMessage;
+  final RxString locationMessage; // RxString으로 변경
   final bool isUnlocked;
   final bool isUnlockable;
   final VoidCallback? onUnlock;
@@ -28,6 +28,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String fixedDate = date.toString().substring(0, 16);
+
     return AlertDialog(
       title: Text(
         '${isUnlocked ? '🔮' : '🔒'} $title',
@@ -37,45 +38,44 @@ class CapsuleDetailsDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (isUnlocked) ...[
-            if (imageUrl != null && imageUrl!.isNotEmpty)
-              Column(
-                children: [
-                  Image.network(
-                    imageUrl!,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (BuildContext context, Widget child,
-                        ImageChunkEvent? loadingProgress) {
-                      if (loadingProgress == null) {
-                        return child; // 이미지가 로드되면 child 반환
-                      }
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null, // 진행률 계산
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Text('이미지를 불러올 수 없습니다.');
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              )
-            else
-              const SizedBox(),
-            if (content != null && content!.isNotEmpty)
+          if (isUnlocked && imageUrl != null && imageUrl!.isNotEmpty) ...[
+            Column(
+              children: [
+                Image.network(
+                  imageUrl!,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (BuildContext context, Widget child,
+                      ImageChunkEvent? loadingProgress) {
+                    if (loadingProgress == null) {
+                      return child; // 이미지가 로드되면 child 반환
+                    }
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null, // 진행률 계산
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Text('이미지를 불러올 수 없습니다.');
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+            if (content != null && content!.isNotEmpty) ...[
               Text(
                 content!,
                 style: const TextStyle(fontSize: 16),
               ),
-            const SizedBox(height: 16),
-            Text(fixedDate),
-            Text(locationMessage),
-          ]
+            ],
+          ],
+          const SizedBox(height: 16),
+          Text(fixedDate),
+          Obx(() => Text(
+              locationMessage.value)), // locationMessage를 Obx로 감싸서 실시간 업데이트
         ],
       ),
       actions: [
@@ -84,7 +84,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
             onPressed: isUnlockable
                 ? () {
                     onUnlock?.call();
-                    Navigator.of(context, rootNavigator: true).pop(); // 수정된 부분
+                    Navigator.of(context, rootNavigator: true).pop();
                     Get.to(() => const CapsuleAnimation());
                   }
                 : () {
@@ -107,7 +107,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
           ),
         TextButton(
           onPressed: () {
-            Navigator.of(context, rootNavigator: true).pop(); // 수정된 부분
+            Navigator.of(context, rootNavigator: true).pop();
           },
           style: ButtonStyle(
             backgroundColor: WidgetStateProperty.resolveWith<Color?>(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:get/get.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:geolocator/geolocator.dart';
@@ -38,6 +39,9 @@ class _BallDropWidgetState extends State<BallDropWidget>
   // 기울기 데이터 저장
   double gravityX = 0.0;
   double gravityY = 1.0;
+
+  // 방위각 데이터 저장
+  double deviceHeading = 0.0;
 
   // GPS 및 방향 데이터
   Position? get currentPosition => geolocationController.currentPosition.value;
@@ -78,12 +82,10 @@ class _BallDropWidgetState extends State<BallDropWidget>
   }
 
   void _listenToLocationStream() {
-    geolocationController.startLocationStream();
-
     geolocationController.positionStream.value = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.best,
-        distanceFilter: 5, // 최소 거리 필터
+        distanceFilter: 3, // 최소 거리 필터
       ),
     ).listen((position) {
       final userOffset = Offset(position.longitude, position.latitude);
@@ -193,35 +195,49 @@ class _BallDropWidgetState extends State<BallDropWidget>
   }
 
   void _showBallDetails(BallPhysics ball) {
-    final canProvideLocation = currentPosition != null;
+    final locationMessage = ''.obs; // RxString 생성
 
-    late final String? locationDifference;
-    late final String locationMessage;
-    late final bool isUnlockable;
-
-    if (canProvideLocation) {
-      locationDifference = calculateLocationDifference(ball.gpsCoordinates);
-      locationMessage = locationDifference ?? '위치 정보를 가져오는 중...';
-      isUnlockable = !ball.isUnlocked &&
-          ball.date.isBefore(DateTime.now()) &&
-          locationDifference != null &&
-          locationDifference == '기억 캡슐의 위치입니다.';
+    // 초기 메시지 설정
+    if (currentPosition != null) {
+      locationMessage.value = calculateLocationDifference(ball.gpsCoordinates);
     } else {
-      locationMessage = '위치 정보 제공 불가';
-      isUnlockable = false;
+      locationMessage.value = '위치 정보를 가져오는 중...';
     }
 
+    // 방위각과 위치 데이터 변경 시 메시지 업데이트
+    final compassSubscription = FlutterCompass.events!.listen((event) {
+      deviceHeading = event.heading ?? 0;
+      if (currentPosition != null) {
+        locationMessage.value =
+            calculateLocationDifference(ball.gpsCoordinates);
+      }
+    });
+
+    final locationSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.best,
+        distanceFilter: 3,
+      ),
+    ).listen((position) {
+      locationMessage.value =
+          calculateLocationDifference(ball.gpsCoordinates, position);
+    });
+
+    // 다이얼로그 표시
     showDialog(
       context: context,
       builder: (context) {
-        return CapsuleDetailsDialog(
+        return Obx(() {
+          return CapsuleDetailsDialog(
             title: ball.title,
             content: ball.isUnlocked ? ball.content : null,
             imageUrl: ball.isUnlocked ? ball.imageUrl : null,
             date: ball.date,
-            locationMessage: locationMessage,
+            locationMessage: locationMessage, // 실시간 업데이트
             isUnlocked: ball.isUnlocked,
-            isUnlockable: isUnlockable,
+            isUnlockable: !ball.isUnlocked &&
+                ball.date.isBefore(DateTime.now()) &&
+                locationMessage.value == '기억 캡슐의 위치입니다.',
             onUnlock: () async {
               try {
                 await FirestoreService.updateCapsuleStatus(
@@ -230,17 +246,31 @@ class _BallDropWidgetState extends State<BallDropWidget>
                 );
                 _initializeBalls(await widget.loadCapsules());
               } catch (e) {
-                _showError("잠금 해제에 실패했습니다.");
+                showError('기억 캡슐을 열 수 없습니다.');
               }
-            });
+            },
+          );
+        });
       },
-    );
+    ).then((_) {
+      // 다이얼로그 닫힌 후 구독 해제
+      compassSubscription.cancel();
+      locationSubscription.cancel();
+    });
   }
 
-  String? calculateLocationDifference(Offset ballCoordinates) {
-    if (currentPosition == null) {
-      return null;
+  String calculateLocationDifference(Offset ballCoordinates,
+      [Position? position]) {
+    late Position userPosition;
+
+    if (position != null) {
+      userPosition = position;
+    } else if (currentPosition != null) {
+      userPosition = currentPosition!;
+    } else {
+      return '위치 정보를 가져오는 중...';
     }
+
     final distance = Geolocator.distanceBetween(
       currentPosition!.latitude,
       currentPosition!.longitude,
@@ -248,22 +278,42 @@ class _BallDropWidgetState extends State<BallDropWidget>
       ballCoordinates.dx,
     );
 
-    if (distance <= 25) {
+    if (distance <= 5) {
       return '기억 캡슐의 위치입니다.';
     }
 
-    final direction = Geolocator.bearingBetween(
-      currentPosition!.latitude,
-      currentPosition!.longitude,
+    // 방위각 계산
+    final bearing = Geolocator.bearingBetween(
+      userPosition.latitude,
+      userPosition.longitude,
       ballCoordinates.dy,
       ballCoordinates.dx,
     );
 
-    print('Distance: $distance, Direction: $direction');
-    return '거리 ${distance.floor()}m 방향: (${direction.floor()}°)';
+    // 상대 방향 계산
+    final relativeBearing = (bearing - deviceHeading + 360) % 360;
+
+    // 상대 방향을 "앞으로", "뒤로", "왼쪽으로", "오른쪽으로"로 매핑
+    String direction;
+    if (relativeBearing >= 315 || relativeBearing < 45) {
+      direction = '앞으로';
+    } else if (relativeBearing >= 45 && relativeBearing < 135) {
+      direction = '오른쪽으로';
+    } else if (relativeBearing >= 135 && relativeBearing < 225) {
+      direction = '뒤로';
+    } else {
+      direction = '왼쪽으로';
+    }
+
+    // 거리 형식화
+    final formattedDistance = distance <= 100
+        ? '${distance.floor()}m'
+        : '${(distance / 1000).toStringAsFixed(1)}km';
+
+    return '$formattedDistance $direction';
   }
 
-  void _showError(String message) {
+  void showError(String message) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

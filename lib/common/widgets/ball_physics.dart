@@ -14,9 +14,9 @@ class BallPhysics {
   double angularVelocity = 0.0; // 각속도
   double rotation;
   Color color;
-  final DateTime date; // 날짜 속성 추가
-  final Offset gpsCoordinates; // GPS 좌표 속성 추가
-  bool isUnlocked; // 잠금 해제 여부 속성 추가
+  final DateTime date;
+  final Offset gpsCoordinates;
+  bool isUnlocked;
   Offset userPosition;
 
   // 기존 상수 정의는 유지
@@ -78,12 +78,11 @@ class BallPhysics {
 
   // 사용자 위치 업데이트 메서드
   void updateUserPosition(Offset newUserPosition) {
-    userPosition = newUserPosition;
     color = _getColor(
       isUnlocked: isUnlocked,
       date: date,
       gpsCoordinates: gpsCoordinates,
-      currentPosition: userPosition,
+      currentPosition: newUserPosition,
     );
   }
 
@@ -112,7 +111,7 @@ class BallPhysics {
     if (isUnlocked) {
       return predefinedColors[0]; // Unlocked 상태
     } else if (date.isBefore(DateTime.now())) {
-      if (distance <= 25) {
+      if (distance <= 5) {
         return predefinedColors[2]; // Date 이전 + GPS 일치
       } else {
         return predefinedColors[3]; // Date 이전 + GPS 불일치

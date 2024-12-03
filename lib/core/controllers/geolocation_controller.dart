@@ -11,10 +11,24 @@ class GeolocationController extends GetxController {
   // 위치 스트림
   final positionStream = Rx<StreamSubscription<Position>?>(null);
 
+  Position? get currentPos => currentPosition.value;
+
   @override
   void onInit() {
     super.onInit();
     getLocation(); // 컨트롤러 초기화 시 위치 정보 가져오기
+  }
+
+  Stream<Position> get positionUpdates => Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 3,
+        ),
+      );
+
+  void subscribeToLocationUpdates(void Function(Position position) onUpdate) {
+    positionStream.value?.cancel(); // 기존 스트림 구독 해제
+    positionStream.value = positionUpdates.listen(onUpdate);
   }
 
   Future<void> getLocation() async {
@@ -59,7 +73,7 @@ class GeolocationController extends GetxController {
     positionStream.value = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.best,
-        distanceFilter: 5, // 위치 변화 감지 최소 거리
+        distanceFilter: 3, // 위치 변화 감지 최소 거리
       ),
     ).listen((position) {
       currentPosition.value = position;

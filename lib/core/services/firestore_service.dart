@@ -45,19 +45,22 @@ class FirestoreService {
   }
 
   // Firestore에 사용자 정보 저장
-  static Future<void> saveUserProfile({
+  static Future<void> updateUserProfile({
     required User user,
     required String nickname,
     required String profileImage,
   }) async {
     try {
-      await _firestore.collection('users').doc(user.uid).set({
-        'nickname': nickname,
-        'profileImage': profileImage,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'deletedAt': null,
-      });
+      (profileImage.isNotEmpty)
+          ? await _firestore.collection('users').doc(user.uid).set({
+              'nickname': nickname,
+              'profileImage': profileImage,
+              'updatedAt': Timestamp.now(),
+            })
+          : await _firestore.collection('users').doc(user.uid).set({
+              'nickname': nickname,
+              'updatedAt': Timestamp.now(),
+            });
     } catch (e) {
       throw Exception('프로필 저장 실패: $e');
     }

@@ -79,7 +79,7 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null && _nicknameController.text.isNotEmpty) {
       try {
-        await FirestoreService.saveUserProfile(
+        await FirestoreService.updateUserProfile(
           user: currentUser,
           nickname: _nicknameController.text,
           profileImage: _profileImageUrl ?? '',
