@@ -5,8 +5,8 @@ import 'package:timea/common/widgets/snack_bar_util.dart';
 
 class CapsuleDetailsDialog extends StatelessWidget {
   final String title;
-  final String content;
-  final String imageUrl;
+  final String? content;
+  final String? imageUrl;
   final DateTime date;
   final String locationMessage;
   final bool isUnlocked;
@@ -16,8 +16,8 @@ class CapsuleDetailsDialog extends StatelessWidget {
   const CapsuleDetailsDialog({
     super.key,
     required this.title,
-    required this.content,
-    required this.imageUrl,
+    this.content,
+    this.imageUrl,
     required this.date,
     required this.locationMessage,
     required this.isUnlocked,
@@ -38,32 +38,44 @@ class CapsuleDetailsDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (isUnlocked) ...[
-            if (imageUrl.isNotEmpty) Image.network(imageUrl, fit: BoxFit.cover),
-            const SizedBox(height: 8),
-            Text(
-              content,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            Text(fixedDate),
-            Text(locationMessage),
-          ] else ...[
-            const Center(
-              child: Icon(
-                Icons.lock,
-                size: 64,
-                color: Colors.grey,
+            if (imageUrl != null && imageUrl!.isNotEmpty)
+              Column(
+                children: [
+                  Image.network(
+                    imageUrl!,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (BuildContext context, Widget child,
+                        ImageChunkEvent? loadingProgress) {
+                      if (loadingProgress == null) {
+                        return child; // 이미지가 로드되면 child 반환
+                      }
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null, // 진행률 계산
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Text('이미지를 불러올 수 없습니다.');
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              )
+            else
+              const SizedBox(),
+            if (content != null && content!.isNotEmpty)
+              Text(
+                content!,
+                style: const TextStyle(fontSize: 16),
               ),
-            ),
             const SizedBox(height: 16),
-            const Text(
-              '이 캡슐은 아직 열리지 않았습니다.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
             Text(fixedDate),
             Text(locationMessage),
-          ],
+          ]
         ],
       ),
       actions: [
@@ -72,7 +84,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
             onPressed: isUnlockable
                 ? () {
                     onUnlock?.call();
-                    Navigator.of(context).pop();
+                    Navigator.of(context, rootNavigator: true).pop(); // 수정된 부분
                     Get.to(() => const CapsuleAnimation());
                   }
                 : () {
@@ -87,13 +99,16 @@ class CapsuleDetailsDialog extends StatelessWidget {
                     isUnlockable ? const Color(0xFFFFD8C2) : Colors.grey,
               ),
               foregroundColor: WidgetStateProperty.resolveWith<Color?>(
-                  (states) =>
-                      isUnlockable ? const Color(0xFF1A1A1A) : Colors.white),
+                (states) =>
+                    isUnlockable ? const Color(0xFF1A1A1A) : Colors.white,
+              ),
             ),
             child: const Text("잠금 해제"),
           ),
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            Navigator.of(context, rootNavigator: true).pop(); // 수정된 부분
+          },
           style: ButtonStyle(
             backgroundColor: WidgetStateProperty.resolveWith<Color?>(
               (states) => const Color(0xFFFFE4A3),

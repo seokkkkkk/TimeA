@@ -33,7 +33,30 @@ class CardBuilder extends StatelessWidget {
                 ),
               ),
               if (imageUrl.isNotEmpty)
-                Image.network(imageUrl, fit: BoxFit.cover),
+                FutureBuilder(
+                  future: precacheImage(NetworkImage(imageUrl), context),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: CircularProgressIndicator(),
+                      );
+                    } else if (snapshot.hasError) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Icon(
+                          Icons.error,
+                          color: Colors.red,
+                        ),
+                      );
+                    } else {
+                      return Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                      );
+                    }
+                  },
+                ),
               if (imageUrl.isNotEmpty) const SizedBox(height: 8),
               Text(
                 content,

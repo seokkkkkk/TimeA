@@ -20,7 +20,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const TimeAppBar(
-        title: '기억 캡슐 📦',
+        title: '기억 상자',
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
@@ -61,7 +61,7 @@ class HomeScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '기억 박스가 비어 있어요.\n당신의 이야기를 담아주세요. 💌',
+                      '기억 상자가 비어 있어요.\n당신의 이야기를 담아주세요. 💌',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 16,

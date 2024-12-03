@@ -8,6 +8,7 @@ import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:timea/core/widgets/apple_login_button.dart';
 import 'package:timea/core/widgets/guest_login_button.dart';
 import 'package:timea/core/widgets/google_login_button.dart';
+import 'package:timea/features/profile/presentation/profile_setup_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   LoginScreen({super.key});
@@ -25,7 +26,9 @@ class LoginScreen extends StatelessWidget {
 
         // 사용자 정보가 없다면 프로필 설정 페이지로 이동
         if (!userDoc.exists) {
-          Get.toNamed('/profileSetup'); // 닉네임 및 프로필 설정 페이지로 이동
+          Get.to(const ProfileSetupScreen(
+            backButtonVisible: true,
+          )); // 닉네임 및 프로필 설정 페이지로 이동
         } else {
           Get.offAllNamed('/');
         }

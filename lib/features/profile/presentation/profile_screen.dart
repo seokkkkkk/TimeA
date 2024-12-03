@@ -6,6 +6,7 @@ import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/core/services/firebase_auth_service.dart';
 import 'package:timea/core/services/firestore_service.dart';
 import 'package:timea/features/profile/%08widget/card_builder.dart';
+import 'package:timea/features/profile/presentation/profile_setup_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final List<Map<String, dynamic>> capsules;
@@ -121,7 +122,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final allCapsules = List<Map<String, dynamic>>.from(widget.capsules);
 
     return Scaffold(
-      appBar: const TimeAppBar(title: '프로필 🧑‍💼'),
+      appBar: const TimeAppBar(title: '프로필'),
       body: widget.isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -150,7 +151,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       GestureDetector(
                         onTap: () {
                           // /profileSetup 페이지로 이동
-                          Get.toNamed('/profileSetup');
+                          Get.to(const ProfileSetupScreen(
+                            backButtonVisible: true,
+                          ));
                         },
                         child: const Text(
                           '프로필 수정',

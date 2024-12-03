@@ -216,8 +216,8 @@ class _BallDropWidgetState extends State<BallDropWidget>
       builder: (context) {
         return CapsuleDetailsDialog(
             title: ball.title,
-            content: ball.content,
-            imageUrl: ball.imageUrl,
+            content: ball.isUnlocked ? ball.content : null,
+            imageUrl: ball.isUnlocked ? ball.imageUrl : null,
             date: ball.date,
             locationMessage: locationMessage,
             isUnlocked: ball.isUnlocked,
