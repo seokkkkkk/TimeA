@@ -1,6 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/route_manager.dart';
 import 'package:timea/common/widgets/envelope_animation.dart';
@@ -15,7 +14,6 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: 'assets/config/.env');
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -41,8 +39,6 @@ class MainApp extends StatelessWidget {
         GetPage(name: '/', page: () => const RootScaffold()),
         GetPage(name: '/notification', page: () => const NotificationScreen()),
         GetPage(name: '/profileSetup', page: () => const ProfileSetupScreen()),
-        GetPage(
-            name: '/envelopAnimation', page: () => const EnvelopeAnimation())
       ],
     );
   }

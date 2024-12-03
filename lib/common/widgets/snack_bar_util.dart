@@ -34,7 +34,7 @@ class SnackbarUtil {
           icon:
               SvgPicture.asset('assets/images/info.svg', width: 24, height: 24),
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color.fromARGB(255, 131, 131, 131),
+          backgroundColor: const Color(0xFFE0E0E0),
           colorText: Colors.black,
           padding: const EdgeInsets.fromLTRB(32, 16, 16, 16));
     }

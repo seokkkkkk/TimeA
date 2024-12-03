@@ -1,6 +1,6 @@
 import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,7 +10,7 @@ import 'package:timea/common/widgets/envelope_animation.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
 import 'package:timea/core/services/firebase_auth_service.dart';
-import 'package:timea/core/services/firestore_service.dart';
+import 'package:timea/features/home/service/capsule_service.dart';
 import 'package:timea/features/map/presentation/map_screen.dart';
 
 class EnvelopeFormScreen extends StatefulWidget {
@@ -30,10 +30,30 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
   final _titleController = TextEditingController();
   final _textContentController = TextEditingController();
   final GeolocationController _geolocationController =
-      Get.put(GeolocationController());
+      Get.find<GeolocationController>();
   DateTime? openDate;
+  bool isSubmitting = false;
 
-  // 날짜 및 시간 선택
+  final FirebaseAuthService authService = FirebaseAuthService();
+  final CapsuleService capsuleService = CapsuleService();
+
+  String? userId;
+
+  @override
+  void initState() {
+    super.initState();
+    // 초기화 로직
+    final currentUser = authService.auth.currentUser;
+    if (currentUser != null) {
+      userId = currentUser.uid;
+    } else {
+      SnackbarUtil.showError(
+        '사용자 정보 없음',
+        '로그인된 사용자가 없습니다. 로그인 후 다시 시도해주세요.',
+      );
+    }
+  }
+
   Future<void> _pickDateTime() async {
     DateTime now = DateTime.now();
     DateTime? date = await showDatePicker(
@@ -63,11 +83,9 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
     }
   }
 
-  // 이미지 선택
   Future<void> _pickImage() async {
     try {
       final pickedImage = await picker.pickImage(source: ImageSource.camera);
-
       if (pickedImage != null) {
         setState(() {
           image = pickedImage;
@@ -80,39 +98,92 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
     }
   }
 
-  Future<String?> _uploadImage() async {
-    if (image == null) return null;
-
-    try {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('capsules/${DateTime.now().millisecondsSinceEpoch}');
-      final uploadTask = await storageRef.putFile(File(image!.path));
-      return await uploadTask.ref.getDownloadURL();
-    } catch (e) {
-      SnackbarUtil.showError('이미지 업로드 실패', '이미지를 업로드하는 중 문제가 발생했습니다: $e');
-      return null;
-    }
+  void _removeImage() {
+    setState(() {
+      image = null;
+    });
   }
 
-  String _calculateDday(DateTime targetDate) {
-    final now = DateTime.now();
-    final difference = targetDate.difference(now).inDays;
+  Widget _buildInputField(TextEditingController controller, String labelText) {
+    return Material(
+      elevation: 1,
+      borderRadius: BorderRadius.circular(8),
+      color: Colors.white,
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: labelText,
+          border: const OutlineInputBorder(borderSide: BorderSide.none),
+        ),
+      ),
+    );
+  }
 
-    if (difference > 0) {
-      return 'D-$difference';
-    } else if (difference == 0) {
-      return 'D-Day';
-    } else {
-      return 'D+${-difference}'; // 개봉 날짜가 지났을 경우
+  Future<void> _handleSubmit(userId) async {
+    if (isSubmitting) return;
+
+    if (_titleController.text.isEmpty ||
+        (_textContentController.text.isEmpty && image == null) ||
+        openDate == null ||
+        _geolocationController.currentPosition.value == null) {
+      SnackbarUtil.showInfo('내용 입력 필요', '필수 항목을 모두 입력해주세요.');
+      return;
+    }
+
+    setState(() {
+      isSubmitting = true;
+    });
+
+    Get.to(() => const EnvelopeAnimation());
+
+    try {
+      final capsuleRef =
+          FirebaseFirestore.instance.collection('capsules').doc();
+      final String capsuleId = capsuleRef.id;
+
+      final imageUrlFuture = image != null
+          ? capsuleService.uploadImage(userId, image!)
+          : Future.value(null);
+
+      final imageUrl = await imageUrlFuture ?? '';
+
+      await capsuleService.saveCapsuleData(
+        capsuleId: capsuleId,
+        userId: userId,
+        title: _titleController.text,
+        content: _textContentController.text,
+        imageUrl: imageUrl,
+        location: GeoPoint(
+          _geolocationController.currentPosition.value!.latitude,
+          _geolocationController.currentPosition.value!.longitude,
+        ),
+        canUnlockedAt: openDate!,
+      );
+
+      widget.onSubmit({
+        'id': capsuleId,
+        'title': _titleController.text,
+        'content': _textContentController.text,
+        'image': imageUrl,
+        'location': GeoPoint(
+          _geolocationController.currentPosition.value!.latitude,
+          _geolocationController.currentPosition.value!.longitude,
+        ),
+        'userId': userId,
+        'canUnlockedAt': Timestamp.fromDate(openDate!),
+      });
+      SnackbarUtil.showSuccess('성공', '캡슐 저장이 완료되었습니다!');
+    } catch (e) {
+      SnackbarUtil.showError('실패', '캡슐 저장 중 문제가 발생했습니다: $e');
+    } finally {
+      setState(() {
+        isSubmitting = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    bool isSubmitting = false;
-
-    final FirebaseAuthService authService = FirebaseAuthService();
     return Scaffold(
       appBar: const TimeAppBar(
         title: '기억하기 🔮',
@@ -124,56 +195,14 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(
-                height: 200,
-                child: MapScreen(),
-              ),
+              const SizedBox(height: 200, child: MapScreen()),
               const SizedBox(height: 16),
-              Material(
-                elevation: 1,
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.white,
-                child: TextField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: '제목',
-                    border: OutlineInputBorder(borderSide: BorderSide.none),
-                  ),
-                ),
-              ),
+              _buildInputField(_titleController, '제목'),
               const SizedBox(height: 16),
-              Material(
-                elevation: 1,
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.white,
-                child: TextField(
-                  controller: _textContentController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: '글로 기억하기',
-                    border: OutlineInputBorder(borderSide: BorderSide.none),
-                  ),
-                ),
-              ),
+              _buildInputField(_textContentController, '글로 기억하기'),
               const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _pickImage,
-                icon: const Icon(Icons.photo),
-                label: const Text('사진으로 기억하기'),
-              ),
-              if (image != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: SizedBox(
-                    height: 200,
-                    width: 200,
-                    child: Image.file(
-                      File(image!.path),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 16),
+
+              // 날짜 선택 위젯
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -186,15 +215,6 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),
-                  if (openDate != null)
-                    Text(
-                      _calculateDday(openDate!), // D-day 계산
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                      ),
-                    ),
                   IconButton(
                     icon: const Icon(Icons.calendar_today),
                     onPressed: _pickDateTime,
@@ -202,82 +222,36 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              Obx(
-                () => Row(
+
+              // 사진 추가 및 삭제
+              if (image == null)
+                ElevatedButton.icon(
+                  onPressed: _pickImage,
+                  icon: const Icon(Icons.photo),
+                  label: const Text('사진으로 기억하기'),
+                )
+              else
+                Stack(
+                  alignment: Alignment.topRight,
                   children: [
-                    Expanded(
-                      child: Text(
-                        _geolocationController.currentPosition.value != null
-                            ? '${_geolocationController.currentPosition.value!.latitude}, ${_geolocationController.currentPosition.value!.longitude}'
-                            : '현재 위치를 가져오세요.',
+                    SizedBox(
+                      height: 200,
+                      width: 200,
+                      child: Image.file(
+                        File(image!.path),
+                        fit: BoxFit.cover,
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.location_on),
-                      onPressed: _geolocationController.getLocation,
+                      icon: const Icon(Icons.cancel, color: Colors.red),
+                      onPressed: _removeImage,
                     ),
                   ],
                 ),
-              ),
               const SizedBox(height: 16),
+
               ElevatedButton(
-                onPressed: () async {
-                  if (isSubmitting) return;
-                  if (_titleController.text.isNotEmpty &&
-                      (_textContentController.text.isNotEmpty ||
-                          image != null) &&
-                      openDate != null &&
-                      _geolocationController.currentPosition.value != null) {
-                    setState(() {
-                      isSubmitting = true;
-                    });
-                    final String? userId = authService.auth.currentUser?.uid;
-
-                    if (userId == null) {
-                      SnackbarUtil.showError(
-                        '사용자 정보 없음',
-                        '로그인된 사용자가 없습니다. 로그인 후 다시 시도해주세요.',
-                      );
-                      return;
-                    }
-
-                    final imageUrl = await _uploadImage();
-                    final capsuleData = {
-                      'title': _titleController.text,
-                      'content': _textContentController.text,
-                      'image': imageUrl ?? '',
-                      'location': GeoPoint(
-                        _geolocationController.currentPosition.value!.latitude,
-                        _geolocationController.currentPosition.value!.longitude,
-                      ),
-                      'userId': userId,
-                      'canUnlockedAt': Timestamp.fromDate(openDate!)
-                    };
-
-                    final savedCapsuleId = await FirestoreService.saveCapsule(
-                      title: _titleController.text,
-                      content: _textContentController.text,
-                      imageUrl: imageUrl ?? '',
-                      location: GeoPoint(
-                        _geolocationController.currentPosition.value!.latitude,
-                        _geolocationController.currentPosition.value!.longitude,
-                      ),
-                      userId: userId,
-                      canUnlockedAt: openDate!,
-                    );
-
-                    capsuleData['id'] = savedCapsuleId;
-
-                    widget.onSubmit(capsuleData);
-
-                    Get.to(() => const EnvelopeAnimation());
-                  } else {
-                    SnackbarUtil.showInfo(
-                      '내용 입력 필요',
-                      '필수 항목을 모두 입력해주세요.',
-                    );
-                  }
-                },
+                onPressed: () => _handleSubmit(userId),
                 child: const Text('추가'),
               ),
             ],
