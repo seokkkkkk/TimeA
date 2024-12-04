@@ -44,11 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _nickname = userDoc['nickname'] as String?;
           });
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('프로필 데이터를 불러오지 못했습니다: $e')),
-        );
-      }
+      } catch (e) {}
     }
   }
 
@@ -133,42 +129,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // 프로필 이미지
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: Colors.transparent,
-                    child: _profileImageUrl == null
-                        ? const CircularProgressIndicator() // 로딩 중 표시
-                        : ClipOval(
-                            child: Image.network(
-                              _profileImageUrl!,
-                              fit: BoxFit.cover,
-                              width: 100,
-                              height: 100,
-                              loadingBuilder: (BuildContext context,
-                                  Widget child,
-                                  ImageChunkEvent? loadingProgress) {
-                                if (loadingProgress == null) {
-                                  return child; // 로드 완료된 경우 이미지 표시
-                                } else {
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value:
-                                          loadingProgress.expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                      .cumulativeBytesLoaded /
-                                                  loadingProgress
-                                                      .expectedTotalBytes!
-                                              : null,
-                                    ),
-                                  ); // 로딩 중 표시
-                                }
-                              },
-                              errorBuilder: (BuildContext context, Object error,
-                                  StackTrace? stackTrace) {
-                                return const Icon(Icons.error,
-                                    size: 50, color: Colors.grey); // 에러 발생 시
-                              },
-                            ),
-                          ),
+                    backgroundColor:
+                        (_profileImageUrl == null || _profileImageUrl!.isEmpty)
+                            ? Colors.grey[300] // 회색 배경
+                            : Colors.transparent,
+                    backgroundImage: (_profileImageUrl != null &&
+                            _profileImageUrl!.isNotEmpty)
+                        ? NetworkImage(_profileImageUrl!) as ImageProvider
+                        : null, // 기본 이미지는 null로 설정
+                    child:
+                        (_profileImageUrl == null || _profileImageUrl!.isEmpty)
+                            ? const Icon(Icons.person,
+                                size: 50, color: Colors.white) // 기본 아이콘
+                            : null,
                   ),
                   const SizedBox(height: 12),
                   // 닉네임과 수정 버튼

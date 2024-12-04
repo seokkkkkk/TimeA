@@ -70,12 +70,14 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Future<void> _saveProfile() async {
+    if (isLoading) {
+      SnackbarUtil.showInfo('저장중', '프로필을 업로드 중입니다.');
+      return;
+    }
     setState(() {
       isSubmitting = true;
     });
-    while (isLoading) {
-      //기다리기 위한 루프
-    }
+
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null && _nicknameController.text.isNotEmpty) {
       try {
