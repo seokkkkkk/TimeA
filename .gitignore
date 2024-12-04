@@ -50,5 +50,4 @@ google-services.json
 **/**/Runner/GoogleService-Info.plist
 **/android/app/google-services.json
 lib/firebase_options.dart
-google-services.json
 macos/Runner/GoogleService-Info.plist
