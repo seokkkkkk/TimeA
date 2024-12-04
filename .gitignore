@@ -51,3 +51,4 @@ google-services.json
 **/android/app/google-services.json
 lib/firebase_options.dart
 macos/Runner/GoogleService-Info.plist
+**/ios/Runner/Storage.swift

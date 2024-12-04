@@ -186,7 +186,7 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const TimeAppBar(
-        title: '기억하기 🔮',
+        title: '기억하기',
         backButton: true,
       ),
       body: SingleChildScrollView(

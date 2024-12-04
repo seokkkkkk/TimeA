@@ -133,10 +133,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // 프로필 이미지
                   CircleAvatar(
                     radius: 50,
-                    backgroundImage: _profileImageUrl != null
-                        ? NetworkImage(_profileImageUrl!)
-                        : const AssetImage('assets/icons/logo.png')
-                            as ImageProvider,
+                    backgroundColor: Colors.transparent,
+                    child: _profileImageUrl == null
+                        ? const CircularProgressIndicator() // 로딩 중 표시
+                        : ClipOval(
+                            child: Image.network(
+                              _profileImageUrl!,
+                              fit: BoxFit.cover,
+                              width: 100,
+                              height: 100,
+                              loadingBuilder: (BuildContext context,
+                                  Widget child,
+                                  ImageChunkEvent? loadingProgress) {
+                                if (loadingProgress == null) {
+                                  return child; // 로드 완료된 경우 이미지 표시
+                                } else {
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                    ),
+                                  ); // 로딩 중 표시
+                                }
+                              },
+                              errorBuilder: (BuildContext context, Object error,
+                                  StackTrace? stackTrace) {
+                                return const Icon(Icons.error,
+                                    size: 50, color: Colors.grey); // 에러 발생 시
+                              },
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 12),
                   // 닉네임과 수정 버튼
