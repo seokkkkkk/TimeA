@@ -83,6 +83,19 @@ class FirestoreService {
     }
   }
 
+  static Future<Map<String, dynamic>> getCapsule(String capsuleId) async {
+    try {
+      final querySnapshot =
+          await _firestore.collection('capsules').doc(capsuleId).get();
+
+      final capsule = querySnapshot.data();
+      capsule!['id'] = querySnapshot.id; // 문서 ID를 추가
+      return capsule;
+    } catch (e) {
+      throw Exception('캡슐을 가져오는 데 실패했습니다: $e');
+    }
+  }
+
   /// 캡슐 상태 업데이트
   static Future<void> updateCapsuleStatus({
     required String capsuleId, // 캡슐 ID

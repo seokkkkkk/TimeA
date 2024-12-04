@@ -199,7 +199,9 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                   height: 200,
                   child: MapScreen(
                     capsules: widget.capsules,
-                    isLoading: true,
+                    isLoading: false,
+                    loadCapsules: () async => [],
+                    canTap: false,
                   )),
               const SizedBox(height: 16),
               _buildInputField(_titleController, '제목'),

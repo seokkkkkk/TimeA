@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timea/common/controllers/navigtaion_bar_controller.dart';
@@ -22,24 +23,44 @@ class _RootScaffoldState extends State<RootScaffold> {
   @override
   void initState() {
     super.initState();
-    _loadCapsules(); // 캡슐 데이터 로드
+    _loadCapsules(null); // 캡슐 데이터 로드
     Get.put(TimeNavigtaionBarController());
   }
 
-  Future<List<Map<String, dynamic>>> _loadCapsules() async {
+  Future<List<Map<String, dynamic>>?> _loadCapsules(String? capsuleId) async {
     try {
-      final data = await FirestoreService.getAllCapsules();
+      List<Map<String, dynamic>> updatedCapsules = [];
+      if (capsuleId != null) {
+        // 단일 캡슐 데이터 로드
+        final data = await FirestoreService.getCapsule(capsuleId);
+        updatedCapsules = capsules.map((capsule) {
+          if (capsule['id'] == capsuleId) {
+            return data;
+          }
+          return capsule;
+        }).toList();
+      } else {
+        // 모든 캡슐 데이터 로드
+        updatedCapsules = await FirestoreService.getAllCapsules();
+      }
+      // 상태 업데이트
       setState(() {
-        capsules = data;
-        isLoading = false;
+        capsules = updatedCapsules;
       });
+      return updatedCapsules;
     } catch (e) {
+      // 에러 상태 처리
       setState(() {
         isLoading = false;
       });
       _showError('캡슐 데이터 로드 실패: $e');
+      return null; // 명확히 null 반환
+    } finally {
+      // 로딩 상태 종료
+      setState(() {
+        isLoading = false;
+      });
     }
-    return capsules;
   }
 
   void _addCapsule(Map<String, dynamic> newCapsule) {
@@ -70,6 +91,7 @@ class _RootScaffoldState extends State<RootScaffold> {
       MapScreen(
         capsules: capsules,
         isLoading: isLoading,
+        loadCapsules: _loadCapsules,
       ),
       HomeScreen(
         capsules: capsules,

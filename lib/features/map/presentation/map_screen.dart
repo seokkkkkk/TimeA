@@ -12,8 +12,17 @@ import 'package:timea/core/services/firestore_service.dart';
 
 class MapScreen extends StatefulWidget {
   final List<Map<String, dynamic>> capsules;
+  final Function loadCapsules;
+  final bool canTap;
+
   final bool isLoading;
-  const MapScreen({super.key, required this.capsules, required this.isLoading});
+  const MapScreen({
+    super.key,
+    required this.capsules,
+    required this.isLoading,
+    required this.loadCapsules,
+    this.canTap = true,
+  });
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -29,32 +38,17 @@ class _MapScreenState extends State<MapScreen> {
   RxBool isMapReady = false.obs;
   RxBool isTracking = false.obs;
 
-  StreamSubscription<Position>? _positionStreamSubscription;
-
-  late final CameraPosition _initialPosition;
-
   final RxSet<Marker> _markers = <Marker>{}.obs;
 
-  Stream<Position> get currentPositionStream => Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 3, // 최소 거리 변화 감지 설정
-      ));
-
-  Position? currentPosition;
+  late final CameraPosition _initialPosition;
 
   @override
   void initState() {
     super.initState();
-    _subscribeToPositionStream();
     _initializeMap();
-  }
-
-  void _subscribeToPositionStream() {
-    _positionStreamSubscription = currentPositionStream.listen((position) {
-      currentPosition = position;
-      _generateMarkerIcons();
-      // 필요시 UI 갱신
+    _generateMarkerIcons(widget.capsules);
+    _geolocationController.subscribeToLocationUpdates((position) {
+      _generateMarkerIcons(widget.capsules);
       setState(() {});
     });
   }
@@ -67,8 +61,12 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     final distance = Geolocator.distanceBetween(
-      currentPosition!.latitude,
-      currentPosition!.longitude,
+      _geolocationController.currentPos != null
+          ? _geolocationController.currentPos!.latitude
+          : 0,
+      _geolocationController.currentPos != null
+          ? _geolocationController.currentPos!.longitude
+          : 0,
       markerPosition.latitude,
       markerPosition.longitude,
     );
@@ -79,8 +77,12 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     final bearing = Geolocator.bearingBetween(
-      currentPosition!.latitude,
-      currentPosition!.longitude,
+      _geolocationController.currentPos != null
+          ? _geolocationController.currentPos!.latitude
+          : 0,
+      _geolocationController.currentPos != null
+          ? _geolocationController.currentPos!.longitude
+          : 0,
       markerPosition.latitude,
       markerPosition.longitude,
     );
@@ -123,17 +125,9 @@ class _MapScreenState extends State<MapScreen> {
 
   void _toggleTracking() {
     if (isTracking.value) {
-      _stopTracking();
+      _geolocationController.positionStream.value?.cancel(); // 추적 중지
     } else {
-      _startTracking();
-    }
-    isTracking.value = !isTracking.value;
-  }
-
-  void _startTracking() {
-    _positionStreamSubscription =
-        Geolocator.getPositionStream().listen((position) async {
-      if (isTracking.value) {
+      _geolocationController.subscribeToLocationUpdates((position) async {
         final GoogleMapController controller = await _controller.future;
         controller.animateCamera(
           CameraUpdate.newCameraPosition(
@@ -143,18 +137,15 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
         );
-      }
-    });
-  }
-
-  void _stopTracking() {
-    isTracking = false.obs; // 추적 중지
+      });
+    }
+    isTracking.toggle();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: isMapReady.value
+      body: !widget.isLoading && isMapReady.value
           ? Stack(
               children: [
                 // Google Map
@@ -169,10 +160,8 @@ class _MapScreenState extends State<MapScreen> {
                     myLocationButtonEnabled: false,
                     markers: _markers.toSet(),
                     onTap: (LatLng position) {
-                      _stopTracking(); // 맵을 클릭하면 추적 중지
-                    },
-                    onCameraMove: (position) {
-                      _stopTracking(); // 카메라 이동 시 추적 중지
+                      _geolocationController.positionStream.value?.cancel();
+                      isTracking.value = false;
                     },
                   );
                 }),
@@ -199,14 +188,16 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Future<void> _generateMarkerIcons() async {
+  Future<void> _generateMarkerIcons(
+      final List<Map<String, dynamic>> newCapsules) async {
     final markers = <Marker>{};
-    for (final capsule in widget.capsules) {
+    for (final capsule in newCapsules) {
       if (capsule['location'] == null || capsule['canUnlockedAt'] == null) {
         continue; // 데이터가 유효하지 않으면 건너뜁니다.
       }
+
       final icon = await _buildMarkerIcon(
-        capsule['isUnlocked'] ?? false,
+        capsule['unlockedAt'] != null,
         capsule['location'],
         capsule['canUnlockedAt'].toDate(),
       );
@@ -219,8 +210,9 @@ class _MapScreenState extends State<MapScreen> {
           ),
           icon: icon,
           onTap: () {
-            _onMarkerTap(capsule);
-            _stopTracking();
+            if (widget.canTap) _onMarkerTap(capsule);
+            _geolocationController.positionStream.value?.cancel();
+            isTracking.value = false;
           },
         ),
       );
@@ -231,8 +223,12 @@ class _MapScreenState extends State<MapScreen> {
   Future<BitmapDescriptor> _buildMarkerIcon(
       bool isUnlocked, GeoPoint location, DateTime canUnlockDate) async {
     final distance = Geolocator.distanceBetween(
-      currentPosition!.latitude,
-      currentPosition!.longitude,
+      _geolocationController.currentPos != null
+          ? _geolocationController.currentPos!.latitude
+          : 0,
+      _geolocationController.currentPos != null
+          ? _geolocationController.currentPos!.longitude
+          : 0,
       location.latitude,
       location.longitude,
     );
@@ -241,7 +237,7 @@ class _MapScreenState extends State<MapScreen> {
 
     final assetPath = isUnlocked
         ? 'assets/images/unlocked-ball.png'
-        : distance <= 5 && canUnlock
+        : (distance <= 5 && canUnlock)
             ? 'assets/images/unlockable-ball.png'
             : 'assets/images/locked-ball.png';
 
@@ -273,22 +269,33 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
 
+    final RxString locationMessage = '위치 정보 가져오는 중...'.obs; // RxString 생성
+
+    locationMessage.value = _getMarkerDescription(
+            GeoPoint(markerPosition.latitude, markerPosition.longitude))
+        .value;
+
     final compassSubscription = FlutterCompass.events!.listen((event) {
-      _getMarkerDescription(
-          GeoPoint(markerPosition.latitude, markerPosition.longitude));
+      locationMessage.value = _getMarkerDescription(
+              GeoPoint(markerPosition.latitude, markerPosition.longitude))
+          .value;
     });
 
-    final locationSubscription =
-        Geolocator.getPositionStream().listen((position) {
-      _getMarkerDescription(
-          GeoPoint(markerPosition.latitude, markerPosition.longitude));
+    final locationSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.best,
+        distanceFilter: 3,
+      ),
+    ).listen((position) {
+      locationMessage.value = _getMarkerDescription(
+              GeoPoint(markerPosition.latitude, markerPosition.longitude))
+          .value;
     });
 
     showDialog(
       context: context,
       builder: (context) {
         return Obx(() {
-          RxString locationMessage = _getMarkerDescription(capsule['location']);
           return CapsuleDetailsDialog(
             title: capsule['title'],
             content: capsule['unlockedAt'] != null ? capsule['content'] : null,
@@ -300,15 +307,18 @@ class _MapScreenState extends State<MapScreen> {
             isUnlocked: capsule['unlockedAt'] != null,
             isUnlockable: (capsule['unlockedAt'] == null) &&
                 capsule['canUnlockedAt'].toDate().isBefore(DateTime.now()) &&
-                _getMarkerDescription(capsule['location'])
-                    .value
-                    .contains('기억 캡슐이 근처에 있습니다.'),
+                locationMessage.value.contains('기억 캡슐이 근처에 있습니다.'),
             onUnlock: () async {
               try {
                 await FirestoreService.updateCapsuleStatus(
                   capsuleId: capsule['id'],
                   unlockedAt: DateTime.now(),
                 );
+                final newCapsules = await widget.loadCapsules(capsule['id']);
+                widget.capsules.clear();
+                widget.capsules.addAll(newCapsules);
+                await _generateMarkerIcons(newCapsules);
+                setState(() {});
               } catch (e) {
                 Get.snackbar('오류', '기억 캡슐을 열 수 없습니다.');
               }
@@ -324,7 +334,7 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
-    _positionStreamSubscription?.cancel(); // 위치 추적 스트림 해제
+    _geolocationController.positionStream.value?.cancel();
     super.dispose();
   }
 }

@@ -110,6 +110,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
   void _initializeBalls(capsules) {
     _balls.clear();
     for (final capsule in capsules) {
+      if (capsule == null) continue;
       _addNewBall(capsule);
     }
   }
@@ -246,7 +247,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
                   capsuleId: ball.id,
                   unlockedAt: DateTime.now(),
                 );
-                _initializeBalls(await widget.loadCapsules());
+                _initializeBalls(await widget.loadCapsules(ball.id));
               } catch (e) {
                 showError('기억 캡슐을 열 수 없습니다.');
               }

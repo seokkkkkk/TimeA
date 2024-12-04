@@ -7,7 +7,7 @@ class HomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> capsules;
   final bool isLoading;
   final Function(Map<String, dynamic>) onAddCapsule;
-  final Function() loadCapsules;
+  final Function loadCapsules;
   const HomeScreen({
     super.key,
     required this.capsules,
