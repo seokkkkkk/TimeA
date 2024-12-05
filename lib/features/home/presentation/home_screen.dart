@@ -7,13 +7,13 @@ class HomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> capsules;
   final bool isLoading;
   final Function(Map<String, dynamic>) onAddCapsule;
-  final Function loadCapsules;
+  final Function updateCapsules;
   const HomeScreen({
     super.key,
     required this.capsules,
     required this.isLoading,
     required this.onAddCapsule,
-    required this.loadCapsules,
+    required this.updateCapsules,
   });
 
   @override
@@ -81,7 +81,7 @@ class HomeScreen extends StatelessWidget {
                 ))
               : BallDropWidget(
                   capsules: capsules,
-                  loadCapsules: loadCapsules,
+                  updateCapsules: updateCapsules,
                 ),
     );
   }

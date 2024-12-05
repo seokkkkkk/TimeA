@@ -200,7 +200,7 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                   child: MapScreen(
                     capsules: widget.capsules,
                     isLoading: false,
-                    loadCapsules: () async => [],
+                    updateCapsules: () {},
                     canTap: false,
                   )),
               const SizedBox(height: 16),

@@ -14,9 +14,9 @@ import 'package:timea/common/widgets/ball_painter.dart';
 
 class BallDropWidget extends StatefulWidget {
   final List<Map<String, dynamic>> capsules;
-  final Function loadCapsules;
+  final Function updateCapsules;
   const BallDropWidget(
-      {super.key, required this.capsules, required this.loadCapsules});
+      {super.key, required this.capsules, required this.updateCapsules});
 
   @override
   State<BallDropWidget> createState() => _BallDropWidgetState();
@@ -243,11 +243,17 @@ class _BallDropWidgetState extends State<BallDropWidget>
                 locationMessage.value.contains('기억 캡슐이 근처에 있습니다.'),
             onUnlock: () async {
               try {
-                await FirestoreService.updateCapsuleStatus(
+                final newCapsule = await FirestoreService.updateCapsuleStatus(
                   capsuleId: ball.id,
                   unlockedAt: DateTime.now(),
                 );
-                _initializeBalls(await widget.loadCapsules(ball.id));
+                final newCapsules = widget.capsules
+                    .map((capsule) =>
+                        capsule['id'] == ball.id ? newCapsule : capsule)
+                    .toList();
+                widget.updateCapsules(newCapsules);
+
+                _initializeBalls(newCapsules);
               } catch (e) {
                 showError('기억 캡슐을 열 수 없습니다.');
               }

@@ -39,9 +39,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       try {
         final userDoc = await FirestoreService.getUserProfile();
         if (userDoc != null) {
+          final userData = userDoc.data() as Map<String, dynamic>;
           setState(() {
-            _profileImageUrl = userDoc['profileImage'] as String?;
-            _nickname = userDoc['nickname'] as String?;
+            _profileImageUrl = userData['profileImage'] as String?;
+            _nickname = userData['nickname'] as String?;
           });
         }
       } catch (e) {}

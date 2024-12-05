@@ -12,7 +12,7 @@ import 'package:timea/core/services/firestore_service.dart';
 
 class MapScreen extends StatefulWidget {
   final List<Map<String, dynamic>> capsules;
-  final Function loadCapsules;
+  final Function updateCapsules;
   final bool canTap;
 
   final bool isLoading;
@@ -20,7 +20,7 @@ class MapScreen extends StatefulWidget {
     super.key,
     required this.capsules,
     required this.isLoading,
-    required this.loadCapsules,
+    required this.updateCapsules,
     this.canTap = true,
   });
 
@@ -310,11 +310,14 @@ class _MapScreenState extends State<MapScreen> {
                 locationMessage.value.contains('기억 캡슐이 근처에 있습니다.'),
             onUnlock: () async {
               try {
-                await FirestoreService.updateCapsuleStatus(
+                final newCapule = await FirestoreService.updateCapsuleStatus(
                   capsuleId: capsule['id'],
                   unlockedAt: DateTime.now(),
                 );
-                final newCapsules = await widget.loadCapsules(capsule['id']);
+                final newCapsules = widget.capsules
+                    .map((c) => c['id'] == newCapule['id'] ? newCapule : c)
+                    .toList();
+                widget.updateCapsules(newCapsules);
                 widget.capsules.clear();
                 widget.capsules.addAll(newCapsules);
                 await _generateMarkerIcons(newCapsules);

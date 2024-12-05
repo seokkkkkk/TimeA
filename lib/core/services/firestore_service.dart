@@ -38,6 +38,7 @@ class FirestoreService {
           .collection('users')
           .doc(FirebaseAuth.instance.currentUser!.uid)
           .get();
+
       return userDoc.exists ? userDoc : null;
     } catch (e) {
       throw Exception('프로필 데이터 로드 실패: $e');
@@ -97,7 +98,7 @@ class FirestoreService {
   }
 
   /// 캡슐 상태 업데이트
-  static Future<void> updateCapsuleStatus({
+  static Future<Map<String, dynamic>> updateCapsuleStatus({
     required String capsuleId, // 캡슐 ID
     required DateTime unlockedAt, // 캡슐 해제 시간
   }) async {
@@ -107,6 +108,16 @@ class FirestoreService {
       await capsuleRef.update({
         'unlockedAt': Timestamp.fromDate(unlockedAt),
       });
+
+      final newCapsule = capsuleRef.get().then(
+        (doc) {
+          final capsule = doc.data();
+          capsule!['id'] = doc.id; // 문서 ID를 추가
+          return capsule;
+        },
+      );
+
+      return newCapsule;
     } catch (e) {
       throw Exception('캡슐 상태 업데이트 실패: $e');
     }

@@ -22,23 +22,14 @@ class _RootScaffoldState extends State<RootScaffold> {
   @override
   void initState() {
     super.initState();
-    _loadCapsules(null); // 캡슐 데이터 로드
+    _loadCapsules(); // 캡슐 데이터 로드
     Get.put(TimeNavigtaionBarController());
   }
 
-  Future<List<Map<String, dynamic>>?> _loadCapsules(String? capsuleId) async {
+  Future<List<Map<String, dynamic>>?> _loadCapsules() async {
     try {
       List<Map<String, dynamic>> updatedCapsules = [];
-      if (capsuleId != null) {
-        // 단일 캡슐 데이터 로드
-        final data = await FirestoreService.getCapsule(capsuleId);
-        updatedCapsules = capsules.map((capsule) {
-          if (capsule['id'] == capsuleId) {
-            return data;
-          }
-          return capsule;
-        }).toList();
-      } else {
+      {
         // 모든 캡슐 데이터 로드
         updatedCapsules = await FirestoreService.getAllCapsules();
       }
@@ -60,6 +51,12 @@ class _RootScaffoldState extends State<RootScaffold> {
         isLoading = false;
       });
     }
+  }
+
+  void updateCapsules(List<Map<String, dynamic>> updatedCapsules) {
+    setState(() {
+      capsules = updatedCapsules;
+    });
   }
 
   void _addCapsule(Map<String, dynamic> newCapsule) {
@@ -90,13 +87,13 @@ class _RootScaffoldState extends State<RootScaffold> {
       MapScreen(
         capsules: capsules,
         isLoading: isLoading,
-        loadCapsules: _loadCapsules,
+        updateCapsules: updateCapsules,
       ),
       HomeScreen(
         capsules: capsules,
         isLoading: isLoading,
         onAddCapsule: _addCapsule,
-        loadCapsules: _loadCapsules,
+        updateCapsules: updateCapsules,
       ),
       ProfileScreen(
         capsules: capsules,
