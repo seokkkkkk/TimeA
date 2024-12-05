@@ -63,7 +63,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _calculateDday(DateTime targetDate) {
     final now = DateTime.now();
-    final difference = targetDate.difference(now).inDays;
+    final nowDateOnly = DateTime(now.year, now.month, now.day);
+    final targetDateOnly =
+        DateTime(targetDate.year, targetDate.month, targetDate.day);
+
+    final difference = targetDateOnly.difference(nowDateOnly).inDays;
 
     if (difference > 0) {
       return 'D-$difference';

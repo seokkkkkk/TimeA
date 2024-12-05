@@ -137,18 +137,13 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
     Get.to(() => const EnvelopeAnimation());
 
     try {
-      final capsuleRef =
-          FirebaseFirestore.instance.collection('capsules').doc();
-      final String capsuleId = capsuleRef.id;
-
       final imageUrlFuture = image != null
           ? capsuleService.uploadImage(userId, image!)
           : Future.value(null);
 
       final imageUrl = await imageUrlFuture ?? '';
 
-      await capsuleService.saveCapsuleData(
-        capsuleId: capsuleId,
+      final capsuleId = await capsuleService.saveCapsuleData(
         userId: userId,
         title: _titleController.text,
         content: _textContentController.text,

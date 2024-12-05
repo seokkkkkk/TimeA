@@ -22,7 +22,7 @@ class FirestoreService {
         'location': location,
         'sharedWith': [], // 빈 배열
         'canUnlockedAt': Timestamp.fromDate(canUnlockedAt),
-        'uploadedAt': Timestamp.now(), // 현재 시간
+        'uploadedAt': Timestamp.now(),
         'unlockedAt': null, // null
         'userId': userId,
       }).then((doc) => doc.id);

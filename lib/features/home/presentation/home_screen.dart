@@ -39,7 +39,7 @@ class HomeScreen extends StatelessWidget {
           decoration: const BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: Colors.black12,
+                color: Colors.white12,
                 blurRadius: 8,
                 offset: Offset(0, 0),
               ),

@@ -20,8 +20,7 @@ class CapsuleService {
     }
   }
 
-  Future<void> saveCapsuleData({
-    required String capsuleId,
+  Future<String> saveCapsuleData({
     required String userId,
     required String title,
     required String content,
@@ -30,14 +29,21 @@ class CapsuleService {
     required DateTime canUnlockedAt,
   }) async {
     try {
-      await _firestore.collection('capsules').doc(capsuleId).set({
+      // 데이터를 Firestore에 추가하고 문서 참조를 반환받습니다.
+      final docRef = await _firestore.collection('capsules').add({
         'title': title,
-        'content': content,
-        'imageUrl': imageUrl,
+        'content': content.isEmpty ? null : content,
+        'imageUrl': imageUrl.isEmpty ? null : imageUrl,
         'location': location,
         'userId': userId,
         'canUnlockedAt': Timestamp.fromDate(canUnlockedAt),
+        'uploadedAt': Timestamp.now(),
+        'unlockedAt': null, // 처음엔 null
+        'sharedWith': [],
       });
+
+      // 자동 생성된 문서 ID 반환
+      return docRef.id;
     } catch (e) {
       SnackbarUtil.showError('캡슐 저장 실패', '캡슐 데이터를 저장하는 중 문제가 발생했습니다: $e');
       rethrow;
