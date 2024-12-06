@@ -17,10 +17,34 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  String? fcmToken = await FirebaseMessaging.instance.getToken();
-  print('FCM Token: $fcmToken');
   await Geolocator.requestPermission();
+  await _initializeFCM();
   runApp(const MainApp());
+}
+
+Future<void> _initializeFCM() async {
+  final messaging = FirebaseMessaging.instance;
+
+  // 알림 권한 요청
+  NotificationSettings settings = await messaging.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  print('알림 권한 상태: ${settings.authorizationStatus}');
+
+  // FCM 토큰 출력
+  String? token = await messaging.getToken();
+  print('FCM 등록 토큰: $token');
+
+  // FCM 백그라운드 메시지 핸들러
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+}
+
+// 백그라운드 메시지 처리
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print('백그라운드 메시지: ${message.messageId}');
 }
 
 class MainApp extends StatelessWidget {

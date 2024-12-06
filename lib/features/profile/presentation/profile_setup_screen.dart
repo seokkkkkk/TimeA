@@ -7,10 +7,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:timea/core/services/firebase_auth_service.dart';
 import 'package:timea/core/services/firestore_service.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   final bool backButtonVisible;
+
   const ProfileSetupScreen({super.key, this.backButtonVisible = false});
 
   @override
@@ -25,6 +27,69 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
   XFile? _selectedImage; // 선택한 이미지 파일
   bool? isSubmitting = false;
   bool isLoading = false;
+  bool? isNicknameChecked;
+  String? previousNickname; // 이전 닉네임을 저장
+
+  @override
+  void initState() {
+    super.initState();
+    isNicknameChecked = widget.backButtonVisible;
+    _nicknameController.addListener(() {
+      setState(() {
+        isNicknameChecked = false; // 닉네임이 변경되면 다시 확인 필요
+        if (_nicknameController.text.isEmpty) {
+          isNicknameChecked = true; // 닉네임이 비어있으면 확인하지 않음
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> checkNickname() async {
+    final nickname = _nicknameController.text.trim();
+
+    if (nickname.isEmpty) {
+      SnackbarUtil.showError('닉네임 입력 필요', '닉네임을 입력해주세요.');
+      return;
+    }
+
+    if (previousNickname == nickname) {
+      // 닉네임이 변경되지 않았으면 재확인하지 않음
+      SnackbarUtil.showInfo('닉네임 변경 없음', '닉네임이 이전과 동일합니다.');
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final exists = await FirestoreService.isNicknameExists(nickname);
+      if (exists) {
+        SnackbarUtil.showError('닉네임 중복', '이미 사용 중인 닉네임입니다.');
+        setState(() {
+          isNicknameChecked = false;
+        });
+      } else {
+        SnackbarUtil.showSuccess('사용 가능', '사용 가능한 닉네임입니다.');
+        setState(() {
+          isNicknameChecked = true;
+          previousNickname = nickname; // 확인된 닉네임 저장
+        });
+      }
+    } catch (e) {
+      SnackbarUtil.showError('중복 확인 실패', e.toString());
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   Future<String?> uploadImage(String userId, XFile image) async {
     setState(() {
@@ -70,31 +135,64 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Future<void> _saveProfile() async {
-    if (isLoading) {
-      SnackbarUtil.showInfo('저장중', '프로필을 업로드 중입니다.');
+    if (isLoading == true) {
+      SnackbarUtil.showInfo('이미지 업로드 중', '프로필 이미지 업로드가 진행 중입니다.');
       return;
     }
+    if (isSubmitting == true) {
+      SnackbarUtil.showInfo('저장 중', '프로필 저장이 진행 중입니다.');
+      return;
+    }
+
+    if (widget.backButtonVisible) {
+      if (_nicknameController.text.isEmpty && _selectedImage == null) {
+        SnackbarUtil.showError('입력 확인', '닉네임과 프로필 사진 중 하나 이상을 설정해야 합니다.');
+        return;
+      }
+    } else {
+      if (_nicknameController.text.isEmpty || _selectedImage == null) {
+        SnackbarUtil.showError('입력 확인', '닉네임과 프로필 사진을 모두 설정해야 합니다.');
+        return;
+      }
+    }
+
+    if (_nicknameController.text.isNotEmpty && !isNicknameChecked!) {
+      SnackbarUtil.showError('닉네임 확인', '닉네임 중복 확인이 필요합니다.');
+      return;
+    }
+
     setState(() {
       isSubmitting = true;
     });
 
-    User? currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null && _nicknameController.text.isNotEmpty) {
-      try {
-        await FirestoreService.updateUserProfile(
-          user: currentUser,
-          nickname: _nicknameController.text,
-          profileImage: _profileImageUrl ?? '',
-        );
-        setState(() {
-          isSubmitting = false;
-        });
-        Get.offAllNamed('/'); // 프로필 저장 후 홈 화면으로 이동
-      } catch (e) {
-        SnackbarUtil.showError('프로필 저장 실패', e.toString());
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('사용자 인증 정보가 없습니다.');
       }
-    } else {
-      SnackbarUtil.showError('닉네임을 입력해주세요.', '');
+
+      if (widget.backButtonVisible) {
+        await FirestoreService.updateUserProfile(
+          user: user,
+          nickname: _nicknameController.text.trim(),
+          profileImage: _profileImageUrl!,
+        );
+      } else {
+        await FirebaseAuthService.saveUserToFirestore(
+          user,
+          _nicknameController.text.trim(),
+          _profileImageUrl!,
+        );
+      }
+
+      Get.offAllNamed('/');
+      SnackbarUtil.showSuccess('프로필 저장 완료', '프로필이 성공적으로 저장되었습니다.');
+    } catch (e) {
+      SnackbarUtil.showError('프로필 저장 실패', e.toString());
+    } finally {
+      setState(() {
+        isSubmitting = false;
+      });
     }
   }
 
@@ -174,10 +272,15 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   color: Colors.white,
                   child: TextField(
                     controller: _nicknameController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: '닉네임',
-                      border: OutlineInputBorder(
+                      border: const OutlineInputBorder(
                         borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: IconButton(
+                        onPressed: isLoading ? null : checkNickname,
+                        icon: const Icon(Icons.check),
+                        tooltip: '중복 확인',
                       ),
                     ),
                   ),
@@ -186,10 +289,8 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
             ),
             // 프로필 설정 완료 버튼
             ElevatedButton(
-              onPressed: isSubmitting == true
-                  ? () {
-                      SnackbarUtil.showInfo('저장중', '프로필을 업로드 중입니다.');
-                    }
+              onPressed: isSubmitting == true || !isNicknameChecked!
+                  ? null
                   : _saveProfile,
               child: const Text('프로필 설정 완료하기'),
             ),

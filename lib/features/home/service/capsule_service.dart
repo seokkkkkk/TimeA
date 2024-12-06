@@ -11,7 +11,10 @@ class CapsuleService {
 
   Future<String?> uploadImage(String userId, XFile image) async {
     try {
-      final storageRef = _storage.ref().child('capsules/$userId/');
+      final uniqueFileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+      final storageRef =
+          _storage.ref().child('capsules/$userId/$uniqueFileName');
       final uploadTask = await storageRef.putFile(File(image.path));
       return await uploadTask.ref.getDownloadURL();
     } catch (e) {

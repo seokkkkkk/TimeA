@@ -37,7 +37,7 @@ class FirebaseAuthService {
   }
 
   // Firestore에 사용자 정보 저장
-  Future<void> saveUserToFirestore(
+  static Future<void> saveUserToFirestore(
       User user, String nickname, String profileImage) async {
     await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
       'nickname': nickname,

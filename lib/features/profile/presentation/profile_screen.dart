@@ -26,11 +26,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _profileImageUrl;
   String? _nickname;
   final _currentUser = FirebaseAuth.instance.currentUser;
+  int _friendCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadProfileData();
+    _loadFriendCount();
   }
 
   // Firestore에서 프로필 데이터 로드
@@ -46,6 +48,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
         }
       } catch (e) {}
+    }
+  }
+
+  // 친구 수 로드
+  Future<void> _loadFriendCount() async {
+    if (_currentUser != null) {
+      try {
+        final userDoc = await FirestoreService.getUserProfile();
+        if (userDoc != null) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          final friends = List<String>.from(userData['friends'] ?? []);
+          setState(() {
+            _friendCount = friends.length;
+          });
+        }
+      } catch (e) {
+        // 에러 처리
+        debugPrint('친구 수 로드 실패: $e');
+      }
     }
   }
 
@@ -170,6 +191,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             color: Color(0xFFC0C0C0),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // 친구 수와 버튼
+                      GestureDetector(
+                        onTap: () {
+                          // 친구 리스트 페이지로 이동
+                          // Get.to(FriendListScreen());
+                        },
+                        child: DecoratedBox(
+                          // 보더를 바텀에만 추가
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Colors.black,
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            '친구 $_friendCount명',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
