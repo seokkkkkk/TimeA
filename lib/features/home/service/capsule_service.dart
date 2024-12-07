@@ -30,6 +30,7 @@ class CapsuleService {
     required String imageUrl,
     required GeoPoint location,
     required DateTime canUnlockedAt,
+    List sharedWith = const [],
   }) async {
     try {
       // 데이터를 Firestore에 추가하고 문서 참조를 반환받습니다.
@@ -42,7 +43,7 @@ class CapsuleService {
         'canUnlockedAt': Timestamp.fromDate(canUnlockedAt),
         'uploadedAt': Timestamp.now(),
         'unlockedAt': null, // 처음엔 null
-        'sharedWith': [],
+        'sharedWith': sharedWith,
       });
 
       // 자동 생성된 문서 ID 반환

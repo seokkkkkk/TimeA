@@ -10,6 +10,7 @@ import 'package:timea/common/widgets/envelope_animation.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
 import 'package:timea/core/services/firebase_auth_service.dart';
+import 'package:timea/core/services/firestore_service.dart';
 import 'package:timea/features/home/service/capsule_service.dart';
 import 'package:timea/features/map/presentation/map_screen.dart';
 
@@ -39,9 +40,13 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
 
   String? userId;
 
+  List<Map<String, dynamic>> friends = [];
+  List<Map<String, dynamic>> selectedFriends = [];
+
   @override
   void initState() {
     super.initState();
+    fetchFriends();
     // 초기화 로직
     final currentUser = authService.auth.currentUser;
     if (currentUser != null) {
@@ -52,6 +57,101 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
         '로그인된 사용자가 없습니다. 로그인 후 다시 시도해주세요.',
       );
     }
+  }
+
+  Future<void> fetchFriends() async {
+    try {
+      friends = await FirestoreService.getFriends(); // Firestore에서 친구 목록 가져오기
+      setState(() {});
+    } catch (e) {
+      SnackbarUtil.showError('에러', '친구 목록을 불러오지 못했습니다: $e');
+    }
+  }
+
+  void selectFriend(Map<String, dynamic>? friend) {
+    if (friend == null) return; // null 체크 추가
+    if (selectedFriends.length >= 4) {
+      SnackbarUtil.showInfo('제한', '최대 4명까지 선택할 수 있습니다.');
+      return;
+    }
+    if (!selectedFriends.contains(friend)) {
+      setState(() => selectedFriends.add(friend));
+    }
+  }
+
+  void removeFriend(Map<String, dynamic> friend) {
+    setState(() => selectedFriends.remove(friend));
+  }
+
+  Widget _buildFriendsDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '함께할 친구 선택',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Material(
+          elevation: 2,
+          borderRadius: BorderRadius.circular(12),
+          child: DropdownButtonFormField<Map<String, dynamic>>(
+            decoration: InputDecoration(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            hint: const Text(
+              '친구를 선택하세요 (최대 4명)',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            items: friends.map((friend) {
+              return DropdownMenuItem(
+                value: friend,
+                child: Text(
+                  friend['nickname'] ?? '이름 없음',
+                  style: const TextStyle(fontSize: 14),
+                ),
+              );
+            }).toList(),
+            onChanged: selectFriend,
+            isDense: true,
+            icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSelectedFriends() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (selectedFriends.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: selectedFriends.map((friend) {
+              return Chip(
+                label: Text(friend['nickname'] ?? ''),
+                deleteIcon: const Icon(Icons.cancel),
+                onDeleted: () => removeFriend(friend),
+                backgroundColor: Colors.grey[200],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _pickDateTime() async {
@@ -134,6 +234,8 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
       isSubmitting = true;
     });
 
+    final sharedWith = selectedFriends.map((friend) => friend['id']).toList();
+
     Get.to(() => const EnvelopeAnimation());
 
     try {
@@ -153,6 +255,7 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
           _geolocationController.currentPosition.value!.longitude,
         ),
         canUnlockedAt: openDate!,
+        sharedWith: sharedWith,
       );
 
       widget.onSubmit({
@@ -166,6 +269,7 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
         ),
         'userId': userId,
         'canUnlockedAt': Timestamp.fromDate(openDate!),
+        'sharedWith': sharedWith,
       });
       SnackbarUtil.showSuccess('성공', '캡슐 저장이 완료되었습니다!');
     } catch (e) {
@@ -250,6 +354,10 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
                     ),
                   ],
                 ),
+              const SizedBox(height: 16),
+              _buildFriendsDropdown(), // 친구 선택 드롭다운
+              const SizedBox(height: 8),
+              _buildSelectedFriends(), // 선택된 친구 리스트
               const SizedBox(height: 16),
 
               ElevatedButton(

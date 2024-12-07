@@ -173,42 +173,82 @@ class FirestoreService {
 
   // 내가 보낸 친구 요청 목록 가져오기
   static Future<List<Map<String, dynamic>>> getFriendRequests() async {
-    final currentUser = FirebaseAuth.instance.currentUser!;
-    final currentUserId = currentUser.uid;
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
     try {
+      // 친구 요청 가져오기
       final querySnapshot = await _firestore
           .collection('friendships')
           .where('userId1', isEqualTo: currentUserId)
           .where('status', isEqualTo: 'pending')
           .get();
 
+      if (querySnapshot.docs.isEmpty) return [];
+
+      // 상대방 ID 리스트 추출
+      final targetUserIds =
+          querySnapshot.docs.map((doc) => doc['userId2']).toList();
+
+      // 상대방의 프로필 정보 가져오기
+      final usersSnapshot = await _firestore
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: targetUserIds)
+          .get();
+
+      // 결과 결합: 요청 정보 + 상대방 프로필
       return querySnapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id; // 문서 ID를 추가
-        return data;
+        final userData = usersSnapshot.docs.firstWhere(
+          (userDoc) => userDoc.id == doc['userId2'],
+        );
+        return {
+          'id': doc.id, // 친구 요청 문서 ID
+          'userId': userData.id,
+          'nickname': userData['nickname'],
+          'profileImage': userData['profileImage'],
+          'status': doc['status'],
+        };
       }).toList();
     } catch (e) {
-      throw Exception('친구 요청 목록을 가져오는 데 실패했습니다: $e');
+      throw Exception('보낸 친구 요청 목록을 가져오는 데 실패했습니다: $e');
     }
   }
 
   // 내가 받은 친구 요청 목록 가져오기
   static Future<List<Map<String, dynamic>>> getIncomingFriendRequests() async {
-    final currentUser = FirebaseAuth.instance.currentUser!;
-    final currentUserId = currentUser.uid;
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
     try {
+      // 받은 친구 요청 가져오기
       final querySnapshot = await _firestore
           .collection('friendships')
           .where('userId2', isEqualTo: currentUserId)
           .where('status', isEqualTo: 'pending')
           .get();
 
+      if (querySnapshot.docs.isEmpty) return [];
+
+      // 요청한 상대방 ID 리스트 추출
+      final requesterIds =
+          querySnapshot.docs.map((doc) => doc['userId1']).toList();
+
+      // 요청한 상대방의 프로필 정보 가져오기
+      final usersSnapshot = await _firestore
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: requesterIds)
+          .get();
+
+      // 결과 결합: 요청 정보 + 상대방 프로필
       return querySnapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id; // 문서 ID를 추가
-        return data;
+        final userData = usersSnapshot.docs.firstWhere(
+          (userDoc) => userDoc.id == doc['userId1'],
+        );
+        return {
+          'id': doc.id, // 친구 요청 문서 ID
+          'userId': userData.id,
+          'nickname': userData['nickname'],
+          'profileImage': userData['profileImage'],
+          'status': doc['status'],
+        };
       }).toList();
     } catch (e) {
       throw Exception('받은 친구 요청 목록을 가져오는 데 실패했습니다: $e');
@@ -330,6 +370,7 @@ class FirestoreService {
     required GeoPoint location,
     required String userId,
     required DateTime canUnlockedAt,
+    List<String> sharedWith = const [],
   }) async {
     final capsulesRef = _firestore.collection('capsules');
 
@@ -351,15 +392,22 @@ class FirestoreService {
   }
 
   static Future<List<Map<String, dynamic>>> getAllCapsules() async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
     try {
       final querySnapshot = await _firestore
           .collection('capsules')
-          .where('userId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+          .where(
+            Filter.or(
+              Filter('userId', isEqualTo: currentUserId),
+              Filter('sharedWith', arrayContains: currentUserId),
+            ),
+          )
           .get();
 
       return querySnapshot.docs.map((doc) {
         final data = doc.data();
-        data['id'] = doc.id; // 문서 ID를 추가
+        data['id'] = doc.id; // 문서 ID 추가
         return data;
       }).toList();
     } catch (e) {
