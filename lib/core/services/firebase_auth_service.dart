@@ -85,7 +85,6 @@ class FirebaseAuthService {
   Future<void> updateFCMToken(String userId) async {
     final newToken = await FCMService().getToken();
     if (newToken == null) {
-      print("FCM 토큰을 가져올 수 없습니다.");
       return;
     }
 
@@ -100,12 +99,7 @@ class FirebaseAuthService {
           'fcmToken': newToken,
           'updatedAt': FieldValue.serverTimestamp(),
         });
-        print("새로운 FCM 토큰으로 업데이트되었습니다.");
-      } else {
-        print("FCM 토큰이 변경되지 않았습니다.");
-      }
-    } else {
-      print("사용자 문서를 찾을 수 없습니다.");
-    }
+      } else {}
+    } else {}
   }
 }

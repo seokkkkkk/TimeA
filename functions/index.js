@@ -1,4 +1,5 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
@@ -81,6 +82,87 @@ exports.createNotification = onDocumentCreated(
         console.log(
             `캡슐 알림 생성 완료: ${event.params.capsuleId} (${diffInDays}일)`
         );
+    }
+);
+
+// Cloud Function: friendships 문서 생성 시 알림 생성
+exports.onFriendRequestSent = onDocumentCreated(
+    "friendships/{friendshipId}",
+    async (event) => {
+        const friendship = event.data.data();
+
+        if (!friendship || friendship.status !== "pending") {
+            return;
+        }
+
+        const { userId1, userId2 } = friendship;
+
+        // 알림 문서 생성
+        const notificationRef = db.collection("notifications").doc();
+
+        await notificationRef.set({
+            sendAt: Timestamp.now(),
+            userId: userId2, // 수신자
+            friendshipId: event.params.friendshipId,
+            title: "친구 요청 도착!",
+            message: `${userId1}님으로부터 친구 요청이 도착했습니다.`,
+            reading: false,
+        });
+
+        // FCM 발송
+        const userDoc = await db.collection("users").doc(userId2).get();
+        const fcmToken = userDoc.data().fcmToken;
+
+        if (fcmToken) {
+            await getMessaging().send({
+                token: fcmToken,
+                notification: {
+                    title: "친구 요청 도착!",
+                    body: `${userId1}님으로부터 친구 요청이 도착했습니다.`,
+                },
+            });
+        }
+    }
+);
+
+// Cloud Function: friendships 문서 업데이트 시 알림 생성
+exports.onFriendRequestAccepted = onDocumentUpdated(
+    "friendships/{friendshipId}",
+    async (event) => {
+        const beforeData = event.data.before.data();
+        const afterData = event.data.after.data();
+
+        if (
+            beforeData.status !== "accepted" &&
+            afterData.status === "accepted"
+        ) {
+            const { userId1, userId2 } = afterData;
+
+            const notificationRef = db.collection("notifications").doc();
+            // 알림 문서 생성
+            await notificationRef.set({
+                sendAt: Timestamp.now(),
+                userId: userId1, // 친구 요청을 보낸 사용자에게 알림
+                friendshipId: event.params.friendshipId,
+                title: "친구 요청 수락됨!",
+                message: `${userId2}님이 친구 요청을 수락했습니다.`,
+                reading: false,
+            });
+
+            // FCM 발송
+            const userDoc = await db.collection("users").doc(userId1).get();
+            const fcmToken = userDoc.data().fcmToken;
+
+            if (fcmToken) {
+                await getMessaging().send({
+                    token: fcmToken,
+                    notification: {
+                        title: "친구 요청 수락됨!",
+                        body: `${userId2}님이 친구 요청을 수락했습니다.`,
+                    },
+                });
+            }
+        }
     }
 );
 

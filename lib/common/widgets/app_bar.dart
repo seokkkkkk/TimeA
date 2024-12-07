@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:timea/features/notification/controllers/notification_controller.dart';
 
 class TimeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
-  final int notificationCount;
+  final bool notification;
   final bool backButton;
 
   const TimeAppBar({
     super.key,
     required this.title,
-    this.notificationCount = 0, // 알림 개수 (기본값 0)
-    this.backButton = false, // 뒤로가기 버튼 여부 (기본값 false)
+    this.notification = true,
+    this.backButton = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final NotificationController notificationController =
+        Get.put(NotificationController());
+
     return AppBar(
       title: Text(
         title,
@@ -38,36 +42,41 @@ class TimeAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
       actions: [
-        Stack(
-          children: [
-            IconButton(
-              onPressed: () {
-                Get.toNamed('/notification');
-              },
-              icon: const Icon(Icons.notifications_none),
-            ),
-            if (notificationCount > 0)
-              Positioned(
-                right: 14,
-                bottom: 14,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '$notificationCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+        if (notification)
+          Obx(() {
+            final count = notificationController.notificationCount.value;
+
+            return Stack(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    Get.toNamed('/notification');
+                  },
+                  icon: const Icon(Icons.notifications_none),
+                ),
+                if (count > 0)
+                  Positioned(
+                    right: 14,
+                    bottom: 14,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-          ],
-        ),
+              ],
+            );
+          }),
       ],
     );
   }

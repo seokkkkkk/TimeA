@@ -48,7 +48,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _nickname = userData['nickname'] as String?;
           });
         }
-      } catch (e) {}
+      } catch (e) {
+        debugPrint('프로필 데이터 로드 실패: $e');
+      }
     }
   }
 
