@@ -6,6 +6,7 @@ import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/core/services/firebase_auth_service.dart';
 import 'package:timea/core/services/firestore_service.dart';
 import 'package:timea/features/profile/%08widget/card_builder.dart';
+import 'package:timea/features/profile/presentation/friend_manage_screen.dart';
 import 'package:timea/features/profile/presentation/profile_setup_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -198,8 +199,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // 친구 수와 버튼
                       GestureDetector(
                         onTap: () {
-                          // 친구 리스트 페이지로 이동
-                          // Get.to(FriendListScreen());
+                          Get.to(const FriendManagementScreen());
                         },
                         child: DecoratedBox(
                           // 보더를 바텀에만 추가

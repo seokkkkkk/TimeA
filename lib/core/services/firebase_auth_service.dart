@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:timea/core/services/FCM_service.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -21,12 +22,22 @@ class FirebaseAuthService {
       idToken: googleAuth.idToken,
     );
 
-    return await _auth.signInWithCredential(credential);
+    final userCredential = await _auth.signInWithCredential(credential);
+
+    // FCM 토큰 업데이트
+    await updateFCMToken(userCredential.user!.uid);
+
+    return userCredential;
   }
 
   // 익명 로그인
   Future<UserCredential> signInAnonymously() async {
-    return await _auth.signInAnonymously();
+    final userCredential = await _auth.signInAnonymously();
+
+    // FCM 토큰 업데이트
+    await updateFCMToken(userCredential.user!.uid);
+
+    return userCredential;
   }
 
   // Firestore에서 사용자 정보 조회
@@ -39,22 +50,62 @@ class FirebaseAuthService {
   // Firestore에 사용자 정보 저장
   static Future<void> saveUserToFirestore(
       User user, String nickname, String profileImage) async {
+    String? token = await FCMService().getToken();
     await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
       'nickname': nickname,
       'profileImage': profileImage,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
       'deletedAt': null,
+      'fcmToken': token,
     });
   }
 
   // 로그아웃
   Future<void> logout() async {
+    final user = _auth.currentUser;
+
+    if (user != null) {
+      // Firestore에서 FCM 토큰 제거
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'fcmToken': null});
+    }
+
     await _auth.signOut();
   }
 
   // 현재 유저 가져오기
   Future<User?> getCurrentUser() async {
     return _auth.currentUser;
+  }
+
+  // Firestore에 FCM 토큰 업데이트
+  Future<void> updateFCMToken(String userId) async {
+    final newToken = await FCMService().getToken();
+    if (newToken == null) {
+      print("FCM 토큰을 가져올 수 없습니다.");
+      return;
+    }
+
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
+    final userSnapshot = await userDoc.get();
+
+    if (userSnapshot.exists) {
+      final currentToken = userSnapshot.data()?['fcmToken'];
+
+      if (currentToken != newToken) {
+        await userDoc.update({
+          'fcmToken': newToken,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        print("새로운 FCM 토큰으로 업데이트되었습니다.");
+      } else {
+        print("FCM 토큰이 변경되지 않았습니다.");
+      }
+    } else {
+      print("사용자 문서를 찾을 수 없습니다.");
+    }
   }
 }

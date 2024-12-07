@@ -2,6 +2,7 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const dayjs = require("dayjs");
 
 initializeApp();
 
@@ -18,9 +19,9 @@ exports.createNotification = onDocumentCreated(
             return;
         }
 
-        const { canUnlockedAt, userId, title } = capsule;
+        const { uploadedAt, canUnlockedAt, userId, title } = capsule;
 
-        if (!canUnlockedAt || !userId || !title) {
+        if (!uploadedAt || !canUnlockedAt || !userId || !title) {
             console.error("캡슐 데이터가 올바르지 않습니다");
             console.error(capsule);
             return;
@@ -31,24 +32,43 @@ exports.createNotification = onDocumentCreated(
         dayBeforeDate.setDate(dayBeforeDate.getDate() - 1);
         dayBeforeDate.setUTCHours(21, 0, 0, 0);
 
-        const today = new Date();
-        const diffInMs = canUnlockDate - today;
-        const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
+        const now = new Date();
+        const uploaded = uploadedAt.toDate();
+        const start = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate()
+        );
+        const end = new Date(
+            uploaded.getFullYear(),
+            uploaded.getMonth(),
+            uploaded.getDate()
+        );
+
+        const diffInDays = Math.ceil((start - end) / (1000 * 60 * 60 * 24));
 
         const notifications = [];
 
-        notifications.push({
-            sendAt: Timestamp.fromDate(dayBeforeDate),
-            userId,
-            capsuleId: event.params.capsuleId,
-            message: `두근두근 ${diffInDays}일 전 남겨진 당신의 기억이 돌아옵니다 💌`,
-        });
+        if (diffInDays > 0) {
+            notifications.push({
+                sendAt: Timestamp.fromDate(dayBeforeDate),
+                userId,
+                capsuleId: event.params.capsuleId,
+                title: "D-1, 내일 추억이 돌아옵니다!",
+                message: `두근두근 ${diffInDays}일 전 남겨진 당신의 기억이 돌아옵니다 💌`,
+                reading: false,
+            });
+        }
 
         notifications.push({
             sendAt: Timestamp.fromDate(canUnlockDate),
             userId,
             capsuleId: event.params.capsuleId,
-            message: `당신의 기억이 돌아왔습니다 🎉 ${title}`,
+            title: "D-Day! 추억을 만나러 가볼까요?",
+            message: `당신의 기억이 돌아왔습니다 🎉 추억의 장소에 방문하여 기억 캡슐을 열어보세요! - ${title} [${dayjs(
+                uploadedAt.toDate()
+            ).format("YYYY-MM-DD")}]`,
+            reading: false,
         });
 
         const batch = db.batch();
@@ -75,11 +95,12 @@ exports.sendNotification = onDocumentCreated(
             return;
         }
 
-        const { sendAt, userId, message } = notification;
+        const { sendAt, userId, title, message } = notification;
 
         const delay = sendAt.toDate().getTime() - Date.now();
 
         if (delay > 0) {
+            console.log("푸시 알림 발송 예정:", delay);
             setTimeout(async () => {
                 try {
                     const userDoc = await db
@@ -88,11 +109,13 @@ exports.sendNotification = onDocumentCreated(
                         .get();
                     const fcmToken = userDoc.data().fcmToken;
 
+                    console.log("fcmToken:", fcmToken);
+
                     if (fcmToken) {
                         await getMessaging().send({
                             token: fcmToken,
                             notification: {
-                                title: "Time& 알림",
+                                title: title,
                                 body: message,
                             },
                         });

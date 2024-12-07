@@ -1,9 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/route_manager.dart';
 import 'package:timea/core/screens/root_scaffold.dart';
+import 'package:timea/core/services/FCM_service.dart';
+import 'package:timea/core/services/firebase_auth_service.dart';
 import 'package:timea/core/utils/root_scaffold_binding.dart';
 import 'package:timea/core/utils/theme.dart';
 import 'package:timea/common/screens/splash.dart';
@@ -18,33 +20,13 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await Geolocator.requestPermission();
-  await _initializeFCM();
+  await FCMService().initialize();
+  final currentUser = FirebaseAuth.instance.currentUser;
+
+  if (currentUser != null) {
+    await FirebaseAuthService().updateFCMToken(currentUser.uid);
+  }
   runApp(const MainApp());
-}
-
-Future<void> _initializeFCM() async {
-  final messaging = FirebaseMessaging.instance;
-
-  // 알림 권한 요청
-  NotificationSettings settings = await messaging.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-
-  print('알림 권한 상태: ${settings.authorizationStatus}');
-
-  // FCM 토큰 출력
-  String? token = await messaging.getToken();
-  print('FCM 등록 토큰: $token');
-
-  // FCM 백그라운드 메시지 핸들러
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-}
-
-// 백그라운드 메시지 처리
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('백그라운드 메시지: ${message.messageId}');
 }
 
 class MainApp extends StatelessWidget {

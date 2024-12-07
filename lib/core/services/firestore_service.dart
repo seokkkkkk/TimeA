@@ -68,7 +68,13 @@ class FirestoreService {
     }
 
     final targetUserId = userQuery.docs.first.id;
+
+    if (targetUserId == user.uid) {
+      throw Exception('자기 자신에게 친구 요청을 보낼 수 없습니다.');
+    }
+
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
+
     final friends = List<String>.from(userDoc.data()?['friends'] ?? []);
     if (friends.contains(targetUserId)) {
       throw Exception('이미 친구입니다.');
@@ -174,6 +180,20 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('친구 요청 거절 실패: $e');
+    }
+  }
+
+  // 친구 요청 취소
+  static Future<void> cancelFriendRequest(String requestId) async {
+    final requestRef = _firestore.collection('friendRequests').doc(requestId);
+
+    try {
+      await requestRef.update({
+        'status': 'canceled',
+        'canceledAt': Timestamp.now(),
+      });
+    } catch (e) {
+      throw Exception('친구 요청 취소 실패: $e');
     }
   }
 
