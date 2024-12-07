@@ -240,7 +240,7 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
 
     try {
       final imageUrlFuture = image != null
-          ? capsuleService.uploadImage(userId, image!)
+          ? capsuleService.uploadImage(userId, image!, quality: 95)
           : Future.value(null);
 
       final imageUrl = await imageUrlFuture ?? '';

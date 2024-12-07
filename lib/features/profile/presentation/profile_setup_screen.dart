@@ -9,6 +9,7 @@ import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timea/core/services/firebase_auth_service.dart';
 import 'package:timea/core/services/firestore_service.dart';
+import 'package:timea/features/home/service/capsule_service.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   final bool backButtonVisible;
@@ -91,25 +92,6 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
-  Future<String?> uploadImage(String userId, XFile image) async {
-    setState(() {
-      isLoading = true;
-    });
-    try {
-      final storageRef = _storage.ref().child(
-          'profile/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg');
-      final uploadTask = await storageRef.putFile(File(image.path));
-      return await uploadTask.ref.getDownloadURL();
-    } catch (e) {
-      SnackbarUtil.showError('이미지 업로드 실패', '이미지를 업로드하는 중 문제가 발생했습니다: $e');
-      return null;
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
@@ -120,21 +102,30 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
       User? currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null) {
-        // 업로드 비동기 처리
-        uploadImage(currentUser.uid, image).then((uploadedUrl) {
-          if (uploadedUrl != null) {
+        setState(() {
+          isLoading = true;
+        });
+        try {
+          final imageUrl = await CapsuleService().uploadImage(
+              currentUser.uid, image,
+              minHeight: 300, minWidth: 300);
+          if (imageUrl != null) {
             setState(() {
-              _profileImageUrl = uploadedUrl; // 업로드 완료 후 업데이트
+              _profileImageUrl = imageUrl; // 업로드 성공 시 URL로 변경
             });
           }
-        }).catchError((e) {
+        } catch (e) {
           SnackbarUtil.showError('이미지 업로드 실패', e.toString());
-        });
+        } finally {
+          setState(() {
+            isLoading = false;
+          });
+        }
       }
     }
   }
 
-  Future<void> _saveProfile() async {
+  Future<void> saveProfile() async {
     if (isLoading == true) {
       SnackbarUtil.showInfo('이미지 업로드 중', '프로필 이미지 업로드가 진행 중입니다.');
       return;
@@ -202,6 +193,7 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
       appBar: TimeAppBar(
         title: '프로필 설정',
         backButton: widget.backButtonVisible,
+        notification: false,
       ),
       resizeToAvoidBottomInset: false,
       body: Padding(
@@ -291,7 +283,7 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
             ElevatedButton(
               onPressed: isSubmitting == true || !isNicknameChecked!
                   ? null
-                  : _saveProfile,
+                  : saveProfile,
               child: const Text('프로필 설정 완료하기'),
             ),
           ],

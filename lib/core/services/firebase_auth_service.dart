@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:timea/core/services/FCM_service.dart';
 
 class FirebaseAuthService {
@@ -20,6 +21,31 @@ class FirebaseAuthService {
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
+    );
+
+    final userCredential = await _auth.signInWithCredential(credential);
+
+    // FCM 토큰 업데이트
+    await updateFCMToken(userCredential.user!.uid);
+
+    return userCredential;
+  }
+
+  // Apple 로그인
+  Future<UserCredential> signInWithApple() async {
+    final appleAuth = await SignInWithApple.getAppleIDCredential(
+      scopes: [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+    );
+
+    print(appleAuth.email);
+    print(appleAuth.familyName);
+
+    final OAuthCredential credential = OAuthProvider('apple.com').credential(
+      idToken: appleAuth.identityToken,
+      accessToken: appleAuth.authorizationCode,
     );
 
     final userCredential = await _auth.signInWithCredential(credential);

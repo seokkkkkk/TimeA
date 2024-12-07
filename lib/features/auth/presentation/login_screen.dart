@@ -27,7 +27,7 @@ class LoginScreen extends StatelessWidget {
         // 사용자 정보가 없다면 프로필 설정 페이지로 이동
         if (!userDoc.exists) {
           Get.to(const ProfileSetupScreen(
-            backButtonVisible: true,
+            backButtonVisible: false,
           )); // 닉네임 및 프로필 설정 페이지로 이동
         } else {
           Get.offAllNamed('/');
@@ -39,9 +39,27 @@ class LoginScreen extends StatelessWidget {
   }
 
   // Apple Sign-In Handler
-  void _handleAppleSignIn(BuildContext context) {
-    if (!Get.isSnackbarOpen) {
-      SnackbarUtil.showError('Apple 로그인 실패', '지원하지 않는 기능입니다.');
+  void _handleAppleSignIn(BuildContext context) async {
+    try {
+      UserCredential userCredential = await _authService.signInWithApple();
+      if (userCredential.user != null) {
+        User? currentUser = userCredential.user;
+        DocumentSnapshot userDoc =
+            await _authService.getUserFromFirestore(currentUser!.uid);
+
+        // 사용자 정보가 없다면 프로필 설정 페이지로 이동
+        if (!userDoc.exists) {
+          Get.to(const ProfileSetupScreen(
+            backButtonVisible: false,
+          )); // 닉네임 및 프로필 설정 페이지로 이동
+        } else {
+          Get.offAllNamed('/');
+        }
+      }
+    } catch (e) {
+      SnackbarUtil.showError('Apple 로그인 실패', e.toString());
+
+      print(e);
     }
   }
 
