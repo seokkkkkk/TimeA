@@ -20,16 +20,10 @@ exports.createNotification = onDocumentCreated(
             return;
         }
 
-        const {
-            uploadedAt,
-            canUnlockedAt,
-            userId,
-            title,
-            sharedWith,
-            nickname,
-        } = capsule;
+        const { uploadedAt, canUnlockedAt, userId, title, sharedWith } =
+            capsule;
 
-        if (!uploadedAt || !canUnlockedAt || !userId || !title || !nickname) {
+        if (!uploadedAt || !canUnlockedAt || !userId || !title) {
             console.error("캡슐 데이터가 올바르지 않습니다");
             console.error(capsule);
             return;
@@ -67,7 +61,7 @@ exports.createNotification = onDocumentCreated(
                     userId: recipientId,
                     capsuleId: event.params.capsuleId,
                     title: "새로운 추억이 공유되었습니다!",
-                    message: `📢 ${nickname}님이 새로운 기억을 공유했습니다! - ${title}`,
+                    message: `📢 공유받은 캡슐을 확인해보세요! - ${title}`,
                     reading: false,
                 });
             }
