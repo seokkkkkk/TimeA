@@ -56,14 +56,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadFriendCount() async {
     if (_currentUser != null) {
       try {
-        final userDoc = await FirestoreService.getUserProfile();
-        if (userDoc != null) {
-          final userData = userDoc.data() as Map<String, dynamic>;
-          final friends = List<String>.from(userData['friends'] ?? []);
-          setState(() {
-            _friendCount = friends.length;
-          });
-        }
+        final friendCount = await FirestoreService.getFriendCount();
+        setState(() {
+          _friendCount = friendCount;
+        });
       } catch (e) {
         // 에러 처리
         debugPrint('친구 수 로드 실패: $e');
@@ -102,8 +98,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    late final List<Map<String, dynamic>> myCapsules;
+    late final List<Map<String, dynamic>> friendCapsules;
+
+    myCapsules = widget.capsules.where((capsule) {
+      final userId = _currentUser?.uid;
+      return capsule['userId'] == userId;
+    }).toList();
+
+    friendCapsules = widget.capsules.where((capsule) {
+      final userId = _currentUser?.uid;
+      return capsule['userId'] != userId;
+    }).toList();
     // 곧 만날 기억 캡슐
-    final soonCapsules = widget.capsules.where((capsule) {
+    final soonCapsules = myCapsules.where((capsule) {
       final unlockDate = (capsule['canUnlockedAt'] as Timestamp).toDate();
       final unlockedAt = (capsule['unlockedAt'] as Timestamp?)?.toDate();
       return unlockDate.isAfter(DateTime.now()) &&
@@ -117,7 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
     // 내가 연 기억 캡슐
-    final openedCapsules = widget.capsules.where((capsule) {
+    final openedCapsules = myCapsules.where((capsule) {
       final unlockedAt = (capsule['unlockedAt'] as Timestamp?)?.toDate();
       return unlockedAt != null;
     }).toList()
@@ -130,7 +138,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
     // 열지 않은 기억 캡슐
-    final overdueCapsules = widget.capsules.where((capsule) {
+    final overdueCapsules = myCapsules.where((capsule) {
       final unlockDate = (capsule['canUnlockedAt'] as Timestamp).toDate();
       final unlockedAt = (capsule['unlockedAt'] as Timestamp?)?.toDate();
       return unlockDate.isBefore(DateTime.now()) && unlockedAt == null;
@@ -141,8 +149,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return dateA.compareTo(dateB); // 가장 오래된 캡슐 순으로 정렬
       });
 
-    // 내 모든 기억 캡슐
-    final allCapsules = List<Map<String, dynamic>>.from(widget.capsules);
+    // 공유 받은 기억 캡슐
+    friendCapsules.sort((a, b) {
+      final dateA = (a['createdAt'] as Timestamp).toDate();
+      final dateB = (b['createdAt'] as Timestamp).toDate();
+      return dateB.compareTo(dateA); // 최근에 생성된 캡슐 순으로 정렬
+    });
 
     return Scaffold(
       appBar: const TimeAppBar(title: '프로필'),
@@ -305,11 +317,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             calculateDday: _calculateDday),
                   ),
                   const SizedBox(height: 24),
-                  // 모든 기억 캡슐 리스트
+                  // 공유 받은 기억 캡슐 리스트
                   const Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '나의 모든 기억 캡슐',
+                      '공유 받은 기억 캡슐',
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
@@ -317,7 +329,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 12),
                   SizedBox(
                     height: 150,
-                    child: allCapsules.isEmpty
+                    child: friendCapsules.isEmpty
                         ? const Center(
                             child: Text(
                               '저장된 캡슐이 없습니다.',
@@ -328,7 +340,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           )
                         : CardBuilder(
-                            capsules: allCapsules,
+                            capsules: friendCapsules,
                             calculateDday: _calculateDday),
                   ),
                   const SizedBox(height: 24),

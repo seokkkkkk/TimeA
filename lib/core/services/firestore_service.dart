@@ -312,6 +312,28 @@ class FirestoreService {
     }
   }
 
+  // 친구 수 가져오기
+  static Future<int> getFriendCount() async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
+    try {
+      final friendshipsQuery = await _firestore
+          .collection('friendships')
+          .where('status', isEqualTo: 'accepted')
+          .where(
+            Filter.or(
+              Filter('userId1', isEqualTo: currentUserId),
+              Filter('userId2', isEqualTo: currentUserId),
+            ),
+          )
+          .get();
+
+      return friendshipsQuery.docs.length;
+    } catch (e) {
+      throw Exception('친구 수를 가져오는 데 실패했습니다: $e');
+    }
+  }
+
   // 친구 삭제
   static Future<void> deleteFriend(String targetUserId) async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
