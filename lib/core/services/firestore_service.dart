@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:timea/common/widgets/snack_bar_util.dart';
 
 class FirestoreService {
   static final _firestore = FirebaseFirestore.instance;
@@ -55,115 +54,90 @@ class FirestoreService {
     }
   }
 
-  // 친구 요청 보내기
-  static Future<void> sendFriendRequest(String nickname) async {
-    final user = FirebaseAuth.instance.currentUser!;
-    final userQuery = await _firestore
-        .collection('users')
-        .where('nickname', isEqualTo: nickname)
-        .get();
+  // 닉네임으로 사용자 찾기 (닉네임은 unique)
+  static Future<DocumentSnapshot?> findUserByNickname(String nickname) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('nickname', isEqualTo: nickname)
+          .get();
 
-    if (userQuery.docs.isEmpty) {
-      throw Exception('사용자를 찾을 수 없습니다.');
+      return querySnapshot.docs.isNotEmpty ? querySnapshot.docs.first : null;
+    } catch (e) {
+      throw Exception('사용자를 찾을 수 없습니다');
     }
+  }
 
-    final targetUserId = userQuery.docs.first.id;
+  // 친구 요청 보내기
+  static Future<void> sendFriendRequest(String targetUserId) async {
+    final currentUser = FirebaseAuth.instance.currentUser!;
+    final currentUserId = currentUser.uid;
 
-    if (targetUserId == user.uid) {
+    if (currentUserId == targetUserId) {
       throw Exception('자기 자신에게 친구 요청을 보낼 수 없습니다.');
     }
 
-    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final friendshipsRef = _firestore.collection('friendships');
 
-    final friends = List<String>.from(userDoc.data()?['friends'] ?? []);
-    if (friends.contains(targetUserId)) {
+    // 이미 친구인지 확인 (양방향 확인)
+    final existingFriendship = await friendshipsRef
+        .where('status', isEqualTo: 'accepted')
+        .where(
+          Filter.or(
+            Filter.and(Filter('userId1', isEqualTo: currentUserId),
+                Filter('userId2', isEqualTo: targetUserId)),
+            Filter.and(Filter('userId1', isEqualTo: targetUserId),
+                Filter('userId2', isEqualTo: currentUserId)),
+          ),
+        )
+        .get();
+
+    if (existingFriendship.docs.isNotEmpty) {
       throw Exception('이미 친구입니다.');
     }
 
-    final requests = await Future.wait([
-      _firestore
-          .collection('friendRequests')
-          .where('from', isEqualTo: user.uid)
-          .where('to', isEqualTo: targetUserId)
-          .where('status', isEqualTo: 'pending')
-          .get(),
-      _firestore
-          .collection('friendRequests')
-          .where('from', isEqualTo: targetUserId)
-          .where('to', isEqualTo: user.uid)
-          .where('status', isEqualTo: 'pending')
-          .get()
-    ]);
+    // 상대방이 나에게 친구 요청을 보냈는지 확인
+    final incomingRequest = await friendshipsRef
+        .where('userId1', isEqualTo: targetUserId)
+        .where('userId2', isEqualTo: currentUserId)
+        .where('status', isEqualTo: 'pending')
+        .get();
 
-    if (requests[0].docs.isNotEmpty) {
-      throw Exception('이미 친구 요청을 보냈습니다.');
+    if (incomingRequest.docs.isNotEmpty) {
+      // 상대방이 보낸 요청을 수락
+      await acceptFriendRequest(incomingRequest.docs.first.id);
+      return;
     }
 
-    if (requests[1].docs.isNotEmpty) {
-      acceptFriendRequest(requests[1].docs.first.id);
-      SnackbarUtil.showSuccess('친구 추가 성공', '상대방이 보낸 친구 요청을 수락했습니다.');
-      return; // 중복 요청 방지
+    // 내가 상대방에게 보낸 요청이 이미 있는지 확인
+    final outgoingRequest = await friendshipsRef
+        .where('userId1', isEqualTo: currentUserId)
+        .where('userId2', isEqualTo: targetUserId)
+        .where('status', whereIn: ['pending', 'accepted']).get();
+
+    if (outgoingRequest.docs.isNotEmpty) {
+      throw Exception('이미 친구 요청을 보냈거나 수락된 상태입니다.');
     }
 
-    try {
-      await _firestore.collection('friendRequests').add({
-        'from': user.uid,
-        'to': targetUserId,
-        'status': 'pending',
-        'requestedAt': Timestamp.now(),
-      });
-    } catch (e) {
-      throw Exception('친구 요청 보내기 실패: $e');
-    }
+    // 새로운 친구 요청 생성
+    await friendshipsRef.add({
+      'userId1': currentUserId,
+      'userId2': targetUserId,
+      'status': 'pending',
+      'createdAt': Timestamp.now(),
+      'updatedAt': Timestamp.now(),
+    });
   }
 
   // 친구 요청 수락
   static Future<void> acceptFriendRequest(String requestId) async {
-    final requestRef = _firestore.collection('friendRequests').doc(requestId);
+    final friendshipRef = _firestore.collection('friendships').doc(requestId);
 
     try {
-      // 친구 요청 상태 업데이트
-      await requestRef.update({
+      await friendshipRef.update({
         'status': 'accepted',
-        'acceptedAt': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
       });
-
-      // 요청 데이터 가져오기
-      final requestSnapshot = await requestRef.get();
-      final requestData = requestSnapshot.data();
-
-      if (requestData == null) {
-        throw Exception('유효하지 않은 친구 요청입니다.');
-      }
-
-      final fromUserId = requestData['from'];
-      final toUserId = requestData['to'];
-
-      // 친구 관계 업데이트 함수
-      Future<void> updateFriends(String userId, String friendId) async {
-        final userRef = _firestore.collection('users').doc(userId);
-
-        await _firestore.runTransaction((transaction) async {
-          final userSnapshot = await transaction.get(userRef);
-
-          if (userSnapshot.exists) {
-            final friends =
-                List<String>.from(userSnapshot.data()?['friends'] ?? []);
-            if (!friends.contains(friendId)) {
-              friends.add(friendId);
-              transaction.update(userRef, {'friends': friends});
-            }
-          } else {
-            throw Exception('사용자 정보를 찾을 수 없습니다: $userId');
-          }
-        });
-      }
-
-      // 두 사용자 간의 친구 관계 업데이트
-      await Future.wait([
-        updateFriends(fromUserId, toUserId),
-        updateFriends(toUserId, fromUserId),
-      ]);
     } catch (e) {
       throw Exception('친구 요청 수락 실패: $e');
     }
@@ -171,12 +145,12 @@ class FirestoreService {
 
   // 친구 요청 거절
   static Future<void> rejectFriendRequest(String requestId) async {
-    final requestRef = _firestore.collection('friendRequests').doc(requestId);
+    final friendshipRef = _firestore.collection('friendships').doc(requestId);
 
     try {
-      await requestRef.update({
+      await friendshipRef.update({
         'status': 'rejected',
-        'rejectedAt': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
       });
     } catch (e) {
       throw Exception('친구 요청 거절 실패: $e');
@@ -185,26 +159,27 @@ class FirestoreService {
 
   // 친구 요청 취소
   static Future<void> cancelFriendRequest(String requestId) async {
-    final requestRef = _firestore.collection('friendRequests').doc(requestId);
+    final friendshipRef = _firestore.collection('friendships').doc(requestId);
 
     try {
-      await requestRef.update({
+      await friendshipRef.update({
         'status': 'canceled',
-        'canceledAt': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
       });
     } catch (e) {
       throw Exception('친구 요청 취소 실패: $e');
     }
   }
 
-  // 친구 요청 목록 가져오기
+  // 내가 보낸 친구 요청 목록 가져오기
   static Future<List<Map<String, dynamic>>> getFriendRequests() async {
-    final user = FirebaseAuth.instance.currentUser!;
+    final currentUser = FirebaseAuth.instance.currentUser!;
+    final currentUserId = currentUser.uid;
 
     try {
       final querySnapshot = await _firestore
-          .collection('friendRequests')
-          .where('to', isEqualTo: user.uid)
+          .collection('friendships')
+          .where('userId1', isEqualTo: currentUserId)
           .where('status', isEqualTo: 'pending')
           .get();
 
@@ -214,43 +189,137 @@ class FirestoreService {
         return data;
       }).toList();
     } catch (e) {
-      throw Exception('친구 요청 목록 가져오기 실패: $e');
+      throw Exception('친구 요청 목록을 가져오는 데 실패했습니다: $e');
+    }
+  }
+
+  // 내가 받은 친구 요청 목록 가져오기
+  static Future<List<Map<String, dynamic>>> getIncomingFriendRequests() async {
+    final currentUser = FirebaseAuth.instance.currentUser!;
+    final currentUserId = currentUser.uid;
+
+    try {
+      final querySnapshot = await _firestore
+          .collection('friendships')
+          .where('userId2', isEqualTo: currentUserId)
+          .where('status', isEqualTo: 'pending')
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id; // 문서 ID를 추가
+        return data;
+      }).toList();
+    } catch (e) {
+      throw Exception('받은 친구 요청 목록을 가져오는 데 실패했습니다: $e');
+    }
+  }
+
+  static Future<int> getIncomingFriendRequestCount() async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
+    try {
+      final querySnapshot = await _firestore
+          .collection('friendships')
+          .where('userId2', isEqualTo: currentUserId)
+          .where('status', isEqualTo: 'pending')
+          .get();
+
+      return querySnapshot.docs.length;
+    } catch (e) {
+      throw Exception('받은 친구 요청 수를 가져오는 데 실패했습니다: $e');
+    }
+  }
+
+  // 친구 목록 가져오기
+  static Future<List<Map<String, dynamic>>> getFriends() async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
+    try {
+      final friendshipsQuery = await _firestore
+          .collection('friendships')
+          .where('status', isEqualTo: 'accepted')
+          .where(
+            Filter.or(
+              Filter('userId1', isEqualTo: currentUserId),
+              Filter('userId2', isEqualTo: currentUserId),
+            ),
+          )
+          .get();
+
+      final friendIds = friendshipsQuery.docs.map((doc) {
+        final data = doc.data();
+        return data['userId1'] == currentUserId
+            ? data['userId2']
+            : data['userId1'];
+      }).toList();
+
+      if (friendIds.isEmpty) return [];
+
+      // 친구 프로필 정보 가져오기
+      final friendsData = await _firestore
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: friendIds)
+          .get();
+
+      return friendsData.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id; // 문서 ID 추가
+        return data;
+      }).toList();
+    } catch (e) {
+      throw Exception('친구 목록을 가져오는 데 실패했습니다: $e');
     }
   }
 
   // 친구 삭제
-  static Future<void> deleteFriend(String friendId) async {
-    final user = FirebaseAuth.instance.currentUser!;
+  static Future<void> deleteFriend(String targetUserId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
     try {
-      // 친구 삭제 로직 함수
-      Future<void> updateFriends(String userId, String friendId) async {
-        final userRef = _firestore.collection('users').doc(userId);
+      final friendshipQuery = await _firestore
+          .collection('friendships')
+          .where(
+            Filter.or(
+              Filter.and(Filter('userId1', isEqualTo: currentUserId),
+                  Filter('userId2', isEqualTo: targetUserId)),
+              Filter.and(Filter('userId1', isEqualTo: targetUserId),
+                  Filter('userId2', isEqualTo: currentUserId)),
+            ),
+          )
+          .get();
 
-        await _firestore.runTransaction((transaction) async {
-          final userSnapshot = await transaction.get(userRef);
-          if (userSnapshot.exists) {
-            final friends =
-                List<String>.from(userSnapshot.data()?['friends'] ?? []);
-            if (friends.contains(friendId)) {
-              friends.remove(friendId);
-              transaction.update(userRef, {'friends': friends});
-            } else {
-              throw Exception('친구 관계를 찾을 수 없습니다: $userId -> $friendId');
-            }
-          } else {
-            throw Exception('사용자 정보를 찾을 수 없습니다: $userId');
-          }
-        });
+      for (var doc in friendshipQuery.docs) {
+        await _firestore.collection('friendships').doc(doc.id).delete();
       }
-
-      // 두 사용자 간 친구 관계 삭제
-      await Future.wait([
-        updateFriends(user.uid, friendId),
-        updateFriends(friendId, user.uid),
-      ]);
     } catch (e) {
       throw Exception('친구 삭제 실패: $e');
+    }
+  }
+
+  // 친구 관계 상태 확인
+  static Future<String?> getFriendshipStatus(String targetUserId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
+    try {
+      final friendshipQuery = await _firestore
+          .collection('friendships')
+          .where(
+            Filter.or(
+              Filter.and(Filter('userId1', isEqualTo: currentUserId),
+                  Filter('userId2', isEqualTo: targetUserId)),
+              Filter.and(Filter('userId1', isEqualTo: targetUserId),
+                  Filter('userId2', isEqualTo: currentUserId)),
+            ),
+          )
+          .get();
+
+      if (friendshipQuery.docs.isEmpty) return null;
+
+      final status = friendshipQuery.docs.first.data()['status'];
+      return status; // pending, accepted, rejected, canceled
+    } catch (e) {
+      throw Exception('친구 관계 상태를 확인할 수 없습니다: $e');
     }
   }
 
