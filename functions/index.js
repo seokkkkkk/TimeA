@@ -47,7 +47,7 @@ exports.createNotification = onDocumentCreated(
             uploaded.getDate()
         );
 
-        const diffInDays = Math.ceil((start - end) / (1000 * 60 * 60 * 24));
+        const diffInDays = Math.floor((start - end) / (1000 * 60 * 60 * 24));
 
         const batch = db.batch();
         const notifications = [];
@@ -55,16 +55,34 @@ exports.createNotification = onDocumentCreated(
 
         recipients.forEach((recipientId) => {
             // 공유 알림 (sharedWith만 해당)
-            if (recipientId !== userId) {
-                notifications.push({
-                    sendAt: Timestamp.fromDate(new Date()), // 즉시 전송
-                    userId: recipientId,
-                    capsuleId: event.params.capsuleId,
-                    title: "새로운 추억이 공유되었습니다!",
-                    message: `📢 공유받은 캡슐을 확인해보세요! - ${title}`,
-                    reading: false,
-                });
-            }
+            if (recipientId !== userId)
+                async () => {
+                    notifications.push({
+                        sendAt: Timestamp.fromDate(new Date()), // 즉시 전송
+                        userId: recipientId,
+                        capsuleId: event.params.capsuleId,
+                        title: "새로운 추억이 공유되었습니다!",
+                        message: `📢 공유받은 캡슐을 확인해보세요! - ${title}`,
+                        reading: false,
+                    });
+
+                    // FCM 발송
+                    const userDoc = await db
+                        .collection("users")
+                        .doc(recipientId)
+                        .get();
+                    const fcmToken = userDoc.data().fcmToken;
+
+                    if (fcmToken) {
+                        await getMessaging().send({
+                            token: fcmToken,
+                            notification: {
+                                title: "새로운 추억이 공유되었습니다!",
+                                message: `📢 공유받은 캡슐을 확인해보세요! - ${title}`,
+                            },
+                        });
+                    }
+                };
 
             // D-1 알림
             if (diffInDays > 0) {
@@ -80,13 +98,13 @@ exports.createNotification = onDocumentCreated(
 
             // D-Day 알림
             notifications.push({
-                sendAt: Timestamp.fromDate(canUnlockDate),
+                sendAt: canUnlockedAt,
                 userId: recipientId,
                 capsuleId: event.params.capsuleId,
                 title: "D-Day! 추억을 만나러 가볼까요?",
                 message: `당신의 기억이 돌아왔습니다 🎉 - ${title} [${dayjs(
                     uploadedAt.toDate()
-                ).format("YYYY-MM-DD")}]`,
+                ).format("YYYY-MM-DD HH:mm:ss")}]`,
                 reading: false,
             });
         });
@@ -205,7 +223,10 @@ exports.sendNotification = onDocumentCreated(
 
         const { sendAt, userId, title, message } = notification;
 
-        const delay = sendAt.toDate().getTime() - Date.now();
+        // 알림 발송 시점에서 시간 차이 계산
+        const now = dayjs();
+        const unlockTime = dayjs(sendAt.toDate());
+        const delay = unlockTime.diff(now, "millisecond"); // 밀리초 단위 시간 차이
 
         if (delay > 0) {
             console.log("푸시 알림 발송 예정:", delay);
