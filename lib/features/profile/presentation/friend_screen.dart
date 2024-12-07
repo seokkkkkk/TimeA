@@ -24,6 +24,17 @@ class _FriendScreenState extends State<FriendScreen> {
     _loadRequests();
   }
 
+  Future<void> _refreshData() async {
+    try {
+      friends.value = await FirestoreService.getFriends();
+      sentRequests.value = await FirestoreService.getFriendRequests();
+      incomingRequests.value =
+          await FirestoreService.getIncomingFriendRequests();
+    } catch (e) {
+      _showSnackbar('데이터 새로고침 실패', e.toString());
+    }
+  }
+
   Future<void> _loadFriends() async {
     try {
       friends.value = await FirestoreService.getFriends();
@@ -97,132 +108,222 @@ class _FriendScreenState extends State<FriendScreen> {
         title: '친구 관리',
         backButton: true,
       ),
-      body: Column(
-        children: [
-          // 닉네임으로 친구 추가
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: context.theme.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _nicknameController,
-                      decoration: const InputDecoration(
-                        hintText: '닉네임으로 친구 추가',
-                        border: OutlineInputBorder(borderSide: BorderSide.none),
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
+        child: Column(
+          children: [
+            // 닉네임으로 친구 추가
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: context.theme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _nicknameController,
+                        decoration: const InputDecoration(
+                          hintText: '닉네임으로 친구 추가',
+                          border:
+                              OutlineInputBorder(borderSide: BorderSide.none),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                      onPressed: _addFriend, icon: const Icon(Icons.person_add))
-                ],
+                    const SizedBox(width: 8),
+                    IconButton(
+                        onPressed: _addFriend,
+                        icon: const Icon(Icons.person_add))
+                  ],
+                ),
               ),
             ),
-          ),
-          // 탭 화면
-          Expanded(
-            child: DefaultTabController(
-              length: 3,
-              child: Column(
-                children: [
-                  const TabBar(
-                    labelColor: Colors.black,
-                    unselectedLabelColor: Colors.grey,
-                    indicatorColor: Colors.black,
-                    indicatorWeight: 2,
-                    tabs: [
-                      Tab(icon: Icon(Icons.people), text: '친구'),
-                      Tab(icon: Icon(Icons.send), text: '보낸 요청'),
-                      Tab(icon: Icon(Icons.inbox), text: '받은 요청'),
-                    ],
-                  ),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        // 친구 목록
-                        Obx(() => ListView.builder(
-                              itemCount: friends.length,
-                              itemBuilder: (context, index) {
-                                final friend = friends[index];
-                                return ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundImage: NetworkImage(
-                                      friend['profileImage'] ??
-                                          'https://via.placeholder.com/150',
-                                    ),
-                                  ),
-                                  title:
-                                      Text(friend['nickname'] ?? '알 수 없는 사용자'),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: Colors.red),
-                                    onPressed: () =>
-                                        _deleteFriend(friend['id']),
-                                  ),
-                                );
-                              },
-                            )),
-
-                        // 내가 보낸 요청
-                        Obx(() => ListView.builder(
-                              itemCount: sentRequests.length,
-                              itemBuilder: (context, index) {
-                                final request = sentRequests[index];
-                                return ListTile(
-                                  title: Text(request['nickname']),
-                                  subtitle: const Text('친구 요청 보냄'),
-                                  trailing: IconButton(
-                                    icon:
-                                        const Icon(Icons.cancel_schedule_send),
-                                    onPressed: () =>
-                                        _cancelRequest(request['id']),
-                                  ),
-                                );
-                              },
-                            )),
-
-                        // 내가 받은 요청
-                        Obx(() => ListView.builder(
-                              itemCount: incomingRequests.length,
-                              itemBuilder: (context, index) {
-                                final request = incomingRequests[index];
-                                return ListTile(
-                                  title: Text(request['nickname']),
-                                  subtitle: const Text('친구 요청 받음'),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.check,
-                                            color: Colors.green),
-                                        onPressed: () =>
-                                            _acceptRequest(request['id']),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.close,
-                                            color: Colors.red),
-                                        onPressed: () =>
-                                            _rejectRequest(request['id']),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            )),
+            // 탭 화면
+            Expanded(
+              child: DefaultTabController(
+                length: 3,
+                child: Column(
+                  children: [
+                    const TabBar(
+                      labelColor: Colors.black,
+                      unselectedLabelColor: Colors.grey,
+                      indicatorColor: Colors.black,
+                      indicatorWeight: 2,
+                      tabs: [
+                        Tab(icon: Icon(Icons.people), text: '친구'),
+                        Tab(icon: Icon(Icons.send), text: '보낸 요청'),
+                        Tab(icon: Icon(Icons.inbox), text: '받은 요청'),
                       ],
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          // 친구 목록
+                          Obx(() => ListView.builder(
+                                itemCount: friends.length,
+                                itemBuilder: (context, index) {
+                                  final friend = friends[index];
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 6, horizontal: 12),
+                                    elevation: 1, // 카드의 입체감
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          8), // 카드 모서리 둥글게
+                                    ),
+                                    child: ListTile(
+                                      leading: CircleAvatar(
+                                        backgroundImage: NetworkImage(
+                                          friend['profileImage'] ??
+                                              'https://via.placeholder.com/150',
+                                        ),
+                                      ),
+                                      title: Text(
+                                        friend['nickname'] ?? '알 수 없는 사용자',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      trailing: TextButton(
+                                        style: TextButton.styleFrom(
+                                          padding: EdgeInsets.zero, // 내부 패딩 제거
+                                          minimumSize:
+                                              const Size(30, 20), // 최소 크기 설정
+                                          tapTargetSize: MaterialTapTargetSize
+                                              .shrinkWrap, // 터치 영역 최소화
+                                        ),
+                                        onPressed: () =>
+                                            _deleteFriend(friend['id']),
+                                        child: const Text(
+                                          '삭제',
+                                          style: TextStyle(
+                                            color: Colors.red,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )),
+
+                          // 내가 보낸 요청 (보낸 친구 요청)
+                          Obx(() => ListView.builder(
+                                itemCount: sentRequests.length,
+                                itemBuilder: (context, index) {
+                                  final request = sentRequests[index];
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 4, horizontal: 8),
+                                    child: Card(
+                                      elevation: 2,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: ListTile(
+                                        title: Text(request['nickname'] ??
+                                            '알 수 없는 사용자'),
+                                        subtitle: const Text('친구 요청 보냄'),
+                                        trailing: TextButton(
+                                          style: TextButton.styleFrom(
+                                            padding: EdgeInsets.zero,
+                                            minimumSize: const Size(30, 20),
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                          ),
+                                          onPressed: () =>
+                                              _cancelRequest(request['id']),
+                                          child: const Text(
+                                            '취소',
+                                            style: TextStyle(
+                                              color: Colors.red,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )),
+
+                          // 내가 받은 요청 (친구 요청 받음)
+                          Obx(() => ListView.builder(
+                                itemCount: incomingRequests.length,
+                                itemBuilder: (context, index) {
+                                  final request = incomingRequests[index];
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 4, horizontal: 8),
+                                    child: Card(
+                                      elevation: 2,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: ListTile(
+                                        title: Text(request['nickname'] ??
+                                            '알 수 없는 사용자'),
+                                        subtitle: const Text('친구 요청 받음'),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TextButton(
+                                              style: TextButton.styleFrom(
+                                                padding: EdgeInsets.zero,
+                                                minimumSize: const Size(30, 20),
+                                                tapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                              ),
+                                              onPressed: () =>
+                                                  _acceptRequest(request['id']),
+                                              child: const Text(
+                                                '수락',
+                                                style: TextStyle(
+                                                  color: Colors.green,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                            TextButton(
+                                              style: TextButton.styleFrom(
+                                                padding: EdgeInsets.zero,
+                                                minimumSize: const Size(30, 20),
+                                                tapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                              ),
+                                              onPressed: () =>
+                                                  _rejectRequest(request['id']),
+                                              child: const Text(
+                                                '거절',
+                                                style: TextStyle(
+                                                  color: Colors.red,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

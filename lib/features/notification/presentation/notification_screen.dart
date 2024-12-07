@@ -27,27 +27,26 @@ class NotificationScreen extends StatelessWidget {
             final notification = controller.notifications[index];
             final isRead = notification['reading'] as bool;
 
-            return ListTile(
-              visualDensity:
-                  const VisualDensity(horizontal: -4, vertical: -4), // 간격 축소
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 8), // 패딩 조절
-              title: Text(notification['title']),
-              subtitle: Text(notification['message']),
-              tileColor: isRead ? Colors.grey[200] : Colors.white,
-              onTap: () {
-                controller.markAsRead(notification['id']);
-                Get.back();
-              },
-              trailing: SizedBox(
-                width: 24, // trailing의 크기 축소
-                height: 24,
-                child: IconButton(
-                  padding: EdgeInsets.zero, // 버튼 내부 패딩 제거
-                  icon: const Icon(Icons.close, size: 20), // 아이콘 크기 조절
-                  onPressed: () {
-                    controller.deleteNotification(notification['id']);
-                  },
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              color: isRead ? Colors.grey[200] : Colors.white,
+              child: ListTile(
+                title: Text(notification['title']),
+                subtitle: Text(notification['message']),
+                onTap: () {
+                  controller.markAsRead(notification['id']);
+                  Get.back();
+                },
+                trailing: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () {
+                      controller.deleteNotification(notification['id']);
+                    },
+                  ),
                 ),
               ),
             );

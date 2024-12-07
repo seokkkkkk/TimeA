@@ -52,26 +52,32 @@ class TimeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   onPressed: () {
                     Get.toNamed('/notification');
                   },
-                  icon: const Icon(Icons.notifications_none),
+                  icon: const Icon(
+                    Icons.notifications_none,
+                  ),
                 ),
                 if (count > 0)
                   Positioned(
-                    right: 14,
-                    bottom: 14,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '$count',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                    right: 12,
+                    bottom: 8,
+                    child: Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
               ],

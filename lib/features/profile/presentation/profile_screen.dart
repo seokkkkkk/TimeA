@@ -153,8 +153,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     // 공유 받은 기억 캡슐
     friendCapsules.sort((a, b) {
-      final dateA = (a['createdAt'] as Timestamp).toDate();
-      final dateB = (b['createdAt'] as Timestamp).toDate();
+      final dateA = (a['uploadedAt'] as Timestamp).toDate();
+      final dateB = (b['uploadedAt'] as Timestamp).toDate();
       return dateB.compareTo(dateA); // 최근에 생성된 캡슐 순으로 정렬
     });
 

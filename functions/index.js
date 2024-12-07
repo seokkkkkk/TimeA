@@ -20,9 +20,16 @@ exports.createNotification = onDocumentCreated(
             return;
         }
 
-        const { uploadedAt, canUnlockedAt, userId, title } = capsule;
+        const {
+            uploadedAt,
+            canUnlockedAt,
+            userId,
+            title,
+            sharedWith,
+            nickname,
+        } = capsule;
 
-        if (!uploadedAt || !canUnlockedAt || !userId || !title) {
+        if (!uploadedAt || !canUnlockedAt || !userId || !title || !nickname) {
             console.error("캡슐 데이터가 올바르지 않습니다");
             console.error(capsule);
             return;
@@ -48,31 +55,49 @@ exports.createNotification = onDocumentCreated(
 
         const diffInDays = Math.ceil((start - end) / (1000 * 60 * 60 * 24));
 
+        const batch = db.batch();
         const notifications = [];
+        const recipients = [userId, ...(sharedWith || [])]; // 공유된 사용자 포함
 
-        if (diffInDays > 0) {
+        recipients.forEach((recipientId) => {
+            // 공유 알림 (sharedWith만 해당)
+            if (recipientId !== userId) {
+                notifications.push({
+                    sendAt: Timestamp.fromDate(new Date()), // 즉시 전송
+                    userId: recipientId,
+                    capsuleId: event.params.capsuleId,
+                    title: "새로운 추억이 공유되었습니다!",
+                    message: `📢 ${nickname}님이 새로운 기억을 공유했습니다! - ${title}`,
+                    reading: false,
+                });
+            }
+
+            // D-1 알림
+            if (diffInDays > 0) {
+                notifications.push({
+                    sendAt: Timestamp.fromDate(dayBeforeDate),
+                    userId: recipientId,
+                    capsuleId: event.params.capsuleId,
+                    title: "D-1, 내일 추억이 돌아옵니다!",
+                    message: `두근두근 ${diffInDays}일 전 남겨진 기억이 돌아옵니다 💌`,
+                    reading: false,
+                });
+            }
+
+            // D-Day 알림
             notifications.push({
-                sendAt: Timestamp.fromDate(dayBeforeDate),
-                userId,
+                sendAt: Timestamp.fromDate(canUnlockDate),
+                userId: recipientId,
                 capsuleId: event.params.capsuleId,
-                title: "D-1, 내일 추억이 돌아옵니다!",
-                message: `두근두근 ${diffInDays}일 전 남겨진 당신의 기억이 돌아옵니다 💌`,
+                title: "D-Day! 추억을 만나러 가볼까요?",
+                message: `당신의 기억이 돌아왔습니다 🎉 - ${title} [${dayjs(
+                    uploadedAt.toDate()
+                ).format("YYYY-MM-DD")}]`,
                 reading: false,
             });
-        }
-
-        notifications.push({
-            sendAt: Timestamp.fromDate(canUnlockDate),
-            userId,
-            capsuleId: event.params.capsuleId,
-            title: "D-Day! 추억을 만나러 가볼까요?",
-            message: `당신의 기억이 돌아왔습니다 🎉 추억의 장소에 방문하여 기억 캡슐을 열어보세요! - ${title} [${dayjs(
-                uploadedAt.toDate()
-            ).format("YYYY-MM-DD")}]`,
-            reading: false,
         });
 
-        const batch = db.batch();
+        // Firestore batch 추가
         notifications.forEach((notification) => {
             const notificationRef = db.collection("notifications").doc();
             batch.set(notificationRef, notification);
@@ -80,7 +105,7 @@ exports.createNotification = onDocumentCreated(
 
         await batch.commit();
         console.log(
-            `캡슐 알림 생성 완료: ${event.params.capsuleId} (${diffInDays}일)`
+            `캡슐 알림 생성 완료: ${event.params.capsuleId} (대상 사용자 ${recipients.length}명)`
         );
     }
 );
@@ -100,12 +125,15 @@ exports.onFriendRequestSent = onDocumentCreated(
         // 알림 문서 생성
         const notificationRef = db.collection("notifications").doc();
 
+        const senderDoc = await db.collection("users").doc(userId1).get();
+        const senderName = senderDoc.data().nickname;
+
         await notificationRef.set({
             sendAt: Timestamp.now(),
             userId: userId2, // 수신자
             friendshipId: event.params.friendshipId,
-            title: "친구 요청 도착!",
-            message: `${userId1}님으로부터 친구 요청이 도착했습니다.`,
+            title: "친구 요청 도착! 💌",
+            message: `${senderName}님으로부터 친구 요청이 도착했습니다.`,
             reading: false,
         });
 
@@ -117,8 +145,8 @@ exports.onFriendRequestSent = onDocumentCreated(
             await getMessaging().send({
                 token: fcmToken,
                 notification: {
-                    title: "친구 요청 도착!",
-                    body: `${userId1}님으로부터 친구 요청이 도착했습니다.`,
+                    title: "친구 요청 도착! 💌",
+                    body: `${senderName}님으로부터 친구 요청이 도착했습니다. 친구 요청을 확인해보세요!`,
                 },
             });
         }
@@ -139,13 +167,17 @@ exports.onFriendRequestAccepted = onDocumentUpdated(
             const { userId1, userId2 } = afterData;
 
             const notificationRef = db.collection("notifications").doc();
+
+            const senderDoc = await db.collection("users").doc(userId2).get();
+            const senderName = senderDoc.data().nickname;
+
             // 알림 문서 생성
             await notificationRef.set({
                 sendAt: Timestamp.now(),
                 userId: userId1, // 친구 요청을 보낸 사용자에게 알림
                 friendshipId: event.params.friendshipId,
-                title: "친구 요청 수락됨!",
-                message: `${userId2}님이 친구 요청을 수락했습니다.`,
+                title: "친구 요청 수락됨! 🎉",
+                message: `${senderName}님이 친구 요청을 수락했습니다. 친구와 함께 추억을 공유해보세요!`,
                 reading: false,
             });
 
@@ -157,8 +189,8 @@ exports.onFriendRequestAccepted = onDocumentUpdated(
                 await getMessaging().send({
                     token: fcmToken,
                     notification: {
-                        title: "친구 요청 수락됨!",
-                        body: `${userId2}님이 친구 요청을 수락했습니다.`,
+                        title: "친구 요청 수락됨! 🎉",
+                        body: `${senderName}님이 친구 요청을 수락했습니다. 친구와 함께 추억을 공유해보세요!`,
                     },
                 });
             }
