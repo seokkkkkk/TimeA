@@ -48,7 +48,11 @@ class NotificationService {
 
     const NotificationDetails details = NotificationDetails(
       android: androidDetails,
-      iOS: DarwinNotificationDetails(),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
     );
 
     await _flutterLocalNotificationsPlugin.show(

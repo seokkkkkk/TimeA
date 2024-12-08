@@ -108,56 +108,54 @@ class _FriendScreenState extends State<FriendScreen> {
         title: '친구 관리',
         backButton: true,
       ),
-      body: RefreshIndicator(
-        onRefresh: _refreshData,
-        child: Column(
-          children: [
-            // 닉네임으로 친구 추가
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: context.theme.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _nicknameController,
-                        decoration: const InputDecoration(
-                          hintText: '닉네임으로 친구 추가',
-                          border:
-                              OutlineInputBorder(borderSide: BorderSide.none),
-                        ),
+      body: Column(
+        children: [
+          // 닉네임으로 친구 추가
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: context.theme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _nicknameController,
+                      decoration: const InputDecoration(
+                        hintText: '닉네임으로 친구 추가',
+                        border: OutlineInputBorder(borderSide: BorderSide.none),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                        onPressed: _addFriend,
-                        icon: const Icon(Icons.person_add))
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                      onPressed: _addFriend, icon: const Icon(Icons.person_add))
+                ],
               ),
             ),
-            // 탭 화면
-            Expanded(
-              child: DefaultTabController(
-                length: 3,
-                child: Column(
-                  children: [
-                    const TabBar(
-                      labelColor: Colors.black,
-                      unselectedLabelColor: Colors.grey,
-                      indicatorColor: Colors.black,
-                      indicatorWeight: 2,
-                      tabs: [
-                        Tab(icon: Icon(Icons.people), text: '친구'),
-                        Tab(icon: Icon(Icons.send), text: '보낸 요청'),
-                        Tab(icon: Icon(Icons.inbox), text: '받은 요청'),
-                      ],
-                    ),
-                    Expanded(
+          ),
+          // 탭 화면
+          Expanded(
+            child: DefaultTabController(
+              length: 3,
+              child: Column(
+                children: [
+                  const TabBar(
+                    labelColor: Colors.black,
+                    unselectedLabelColor: Colors.grey,
+                    indicatorColor: Colors.black,
+                    indicatorWeight: 2,
+                    tabs: [
+                      Tab(icon: Icon(Icons.people), text: '친구'),
+                      Tab(icon: Icon(Icons.send), text: '보낸 요청'),
+                      Tab(icon: Icon(Icons.inbox), text: '받은 요청'),
+                    ],
+                  ),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: _refreshData,
                       child: TabBarView(
                         children: [
                           // 친구 목록
@@ -251,79 +249,81 @@ class _FriendScreenState extends State<FriendScreen> {
                               )),
 
                           // 내가 받은 요청 (친구 요청 받음)
-                          Obx(() => ListView.builder(
-                                itemCount: incomingRequests.length,
-                                itemBuilder: (context, index) {
-                                  final request = incomingRequests[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 4, horizontal: 8),
-                                    child: Card(
-                                      elevation: 2,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: ListTile(
-                                        title: Text(request['nickname'] ??
-                                            '알 수 없는 사용자'),
-                                        subtitle: const Text('친구 요청 받음'),
-                                        trailing: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            TextButton(
-                                              style: TextButton.styleFrom(
-                                                padding: EdgeInsets.zero,
-                                                minimumSize: const Size(30, 20),
-                                                tapTargetSize:
-                                                    MaterialTapTargetSize
-                                                        .shrinkWrap,
-                                              ),
-                                              onPressed: () =>
-                                                  _acceptRequest(request['id']),
-                                              child: const Text(
-                                                '수락',
-                                                style: TextStyle(
-                                                  color: Colors.green,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                          Obx(
+                            () => ListView.builder(
+                              itemCount: incomingRequests.length,
+                              itemBuilder: (context, index) {
+                                final request = incomingRequests[index];
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 4, horizontal: 8),
+                                  child: Card(
+                                    elevation: 2,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: ListTile(
+                                      title: Text(
+                                          request['nickname'] ?? '알 수 없는 사용자'),
+                                      subtitle: const Text('친구 요청 받음'),
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          TextButton(
+                                            style: TextButton.styleFrom(
+                                              padding: EdgeInsets.zero,
+                                              minimumSize: const Size(30, 20),
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                            ),
+                                            onPressed: () =>
+                                                _acceptRequest(request['id']),
+                                            child: const Text(
+                                              '수락',
+                                              style: TextStyle(
+                                                color: Colors.green,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
                                               ),
                                             ),
-                                            TextButton(
-                                              style: TextButton.styleFrom(
-                                                padding: EdgeInsets.zero,
-                                                minimumSize: const Size(30, 20),
-                                                tapTargetSize:
-                                                    MaterialTapTargetSize
-                                                        .shrinkWrap,
-                                              ),
-                                              onPressed: () =>
-                                                  _rejectRequest(request['id']),
-                                              child: const Text(
-                                                '거절',
-                                                style: TextStyle(
-                                                  color: Colors.red,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                                          ),
+                                          TextButton(
+                                            style: TextButton.styleFrom(
+                                              padding: EdgeInsets.zero,
+                                              minimumSize: const Size(30, 20),
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                            ),
+                                            onPressed: () =>
+                                                _rejectRequest(request['id']),
+                                            child: const Text(
+                                              '거절',
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  );
-                                },
-                              )),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -53,20 +53,20 @@ exports.createNotification = onDocumentCreated(
         const notifications = [];
         const recipients = [userId, ...(sharedWith || [])]; // 공유된 사용자 포함
 
-        recipients.forEach((recipientId) => {
+        for (const recipientId of recipients) {
             // 공유 알림 (sharedWith만 해당)
-            if (recipientId !== userId)
-                async () => {
-                    notifications.push({
-                        sendAt: Timestamp.fromDate(new Date()), // 즉시 전송
-                        userId: recipientId,
-                        capsuleId: event.params.capsuleId,
-                        title: "새로운 추억이 공유되었습니다!",
-                        message: `📢 공유받은 캡슐을 확인해보세요! - ${title}`,
-                        reading: false,
-                    });
+            if (recipientId !== userId) {
+                notifications.push({
+                    sendAt: Timestamp.fromDate(new Date()), // 즉시 전송
+                    userId: recipientId,
+                    capsuleId: event.params.capsuleId,
+                    title: "새로운 추억이 공유되었습니다!",
+                    message: `📢 공유받은 캡슐을 확인해보세요! - ${title}`,
+                    reading: false,
+                });
 
-                    // FCM 발송
+                // FCM 발송
+                try {
                     const userDoc = await db
                         .collection("users")
                         .doc(recipientId)
@@ -78,11 +78,17 @@ exports.createNotification = onDocumentCreated(
                             token: fcmToken,
                             notification: {
                                 title: "새로운 추억이 공유되었습니다!",
-                                message: `📢 공유받은 캡슐을 확인해보세요! - ${title}`,
+                                body: `📢 공유받은 캡슐을 확인해보세요! - ${title}`,
                             },
                         });
+                        console.log("공유 알림 발송 완료:", recipientId);
+                    } else {
+                        console.warn(`FCM 토큰이 없습니다: ${recipientId}`);
                     }
-                };
+                } catch (error) {
+                    console.error("FCM 알림 발송 중 오류 발생:", error);
+                }
+            }
 
             // D-1 알림
             if (diffInDays > 0) {
@@ -102,12 +108,12 @@ exports.createNotification = onDocumentCreated(
                 userId: recipientId,
                 capsuleId: event.params.capsuleId,
                 title: "D-Day! 추억을 만나러 가볼까요?",
-                message: `당신의 기억이 돌아왔습니다 🎉 - ${title} [${dayjs(
+                message: `오늘, 과거에 남겨진 추억이 돌아옵니다 🎉 - ${title} [${dayjs(
                     uploadedAt.toDate()
-                ).format("YYYY-MM-DD HH:mm:ss")}]`,
+                ).format("YYYY-MM-DD")}]`,
                 reading: false,
             });
-        });
+        }
 
         // Firestore batch 추가
         notifications.forEach((notification) => {
@@ -228,7 +234,7 @@ exports.sendNotification = onDocumentCreated(
         const unlockTime = dayjs(sendAt.toDate());
         const delay = unlockTime.diff(now, "millisecond"); // 밀리초 단위 시간 차이
 
-        if (delay > 0) {
+        if (delay > 0 && unlockTime.isAfter(now)) {
             console.log("푸시 알림 발송 예정:", delay);
             setTimeout(async () => {
                 try {

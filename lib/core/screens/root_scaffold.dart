@@ -26,27 +26,16 @@ class _RootScaffoldState extends State<RootScaffold> {
     Get.put(TimeNavigtaionBarController());
   }
 
-  Future<List<Map<String, dynamic>>?> _loadCapsules() async {
+  Future<void> _loadCapsules() async {
     try {
-      List<Map<String, dynamic>> updatedCapsules = [];
-      {
-        // 모든 캡슐 데이터 로드
-        updatedCapsules = await FirestoreService.getAllCapsules();
-      }
-      // 상태 업데이트
+      List<Map<String, dynamic>> updatedCapsules =
+          await FirestoreService.getAllCapsules();
       setState(() {
         capsules = updatedCapsules;
       });
-      return updatedCapsules;
     } catch (e) {
-      // 에러 상태 처리
-      setState(() {
-        isLoading = false;
-      });
       _showError('캡슐 데이터 로드 실패: $e');
-      return null; // 명확히 null 반환
     } finally {
-      // 로딩 상태 종료
       setState(() {
         isLoading = false;
       });
@@ -84,20 +73,29 @@ class _RootScaffoldState extends State<RootScaffold> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      MapScreen(
-        capsules: capsules,
-        isLoading: isLoading,
-        updateCapsules: updateCapsules,
+      RefreshIndicator(
+        onRefresh: _loadCapsules, // 스와이프 새로고침 시 데이터 로드
+        child: MapScreen(
+          capsules: capsules,
+          isLoading: isLoading,
+          updateCapsules: updateCapsules,
+        ),
       ),
-      HomeScreen(
-        capsules: capsules,
-        isLoading: isLoading,
-        onAddCapsule: _addCapsule,
-        updateCapsules: updateCapsules,
+      RefreshIndicator(
+        onRefresh: _loadCapsules,
+        child: HomeScreen(
+          capsules: capsules,
+          isLoading: isLoading,
+          onAddCapsule: _addCapsule,
+          updateCapsules: updateCapsules,
+        ),
       ),
-      ProfileScreen(
-        capsules: capsules,
-        isLoading: isLoading,
+      RefreshIndicator(
+        onRefresh: _loadCapsules,
+        child: ProfileScreen(
+          capsules: capsules,
+          isLoading: isLoading,
+        ),
       ),
     ];
 
