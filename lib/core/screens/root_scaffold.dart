@@ -73,22 +73,16 @@ class _RootScaffoldState extends State<RootScaffold> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      RefreshIndicator(
-        onRefresh: _loadCapsules, // 스와이프 새로고침 시 데이터 로드
-        child: MapScreen(
-          capsules: capsules,
-          isLoading: isLoading,
-          updateCapsules: updateCapsules,
-        ),
+      MapScreen(
+        capsules: capsules,
+        isLoading: isLoading,
+        updateCapsules: updateCapsules,
       ),
-      RefreshIndicator(
-        onRefresh: _loadCapsules,
-        child: HomeScreen(
-          capsules: capsules,
-          isLoading: isLoading,
-          onAddCapsule: _addCapsule,
-          updateCapsules: updateCapsules,
-        ),
+      HomeScreen(
+        capsules: capsules,
+        isLoading: isLoading,
+        onAddCapsule: _addCapsule,
+        updateCapsules: updateCapsules,
       ),
       RefreshIndicator(
         onRefresh: _loadCapsules,

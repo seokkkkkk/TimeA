@@ -30,6 +30,7 @@ class CapsuleDetailsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String fixedDate = date.toString().substring(0, 16);
+    print(content);
 
     return AlertDialog(
       title: Text(
@@ -67,12 +68,12 @@ class CapsuleDetailsDialog extends StatelessWidget {
                 const SizedBox(height: 8),
               ],
             ),
-            if ((content != null) && content!.isNotEmpty) ...[
-              Text(
-                content!,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ],
+          ],
+          if ((content != null) && content!.isNotEmpty) ...[
+            Text(
+              content!,
+              style: const TextStyle(fontSize: 16),
+            ),
           ],
           const SizedBox(height: 16),
           Text(fixedDate),
