@@ -18,12 +18,13 @@ Time&는 사용자가 텍스트, 사진 등으로 타임 캡슐을 작성하고,
 
 ## **주요 기술 스택**
 - **개발 언어**: Flutter  
-- **지도 API**: Naver Map  
+- **지도 API**: Google Maps API  
 - **백엔드**: Firebase  
   - Firebase Authentication  
   - Firestore  
   - Firebase Storage  
   - Firebase Cloud Messaging (FCM)
+  - Firebase Functions
 
 ---
 
@@ -49,7 +50,7 @@ Flutter를 사용해 개발되었으며, Firebase를 활용하였습니다.
     flutter pub get
     flutter run
     ```
-3. Firebase 및 Naver Map API Key를 설정합니다.
+3. Firebase 및 Google Maps API Key를 설정합니다.
    - 설정 방법은 각 서비스의 Docs를 참고하세요.
 
 ---
