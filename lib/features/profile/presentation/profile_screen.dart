@@ -3,6 +3,7 @@ import 'package:get/route_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:timea/common/widgets/app_bar.dart';
+import 'package:timea/core/model/capsule.dart';
 import 'package:timea/core/services/firebase_auth_service.dart';
 import 'package:timea/core/services/firestore_service.dart';
 import 'package:timea/features/profile/presentation/friend_screen.dart';
@@ -10,7 +11,7 @@ import 'package:timea/features/profile/widget/card_builder.dart';
 import 'package:timea/features/profile/presentation/profile_setup_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> capsules;
+  final List<Capsule> capsules;
   final bool isLoading;
 
   const ProfileScreen({
@@ -40,12 +41,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfileData() async {
     if (_currentUser != null) {
       try {
-        final userDoc = await FirestoreService.getUserProfile();
-        if (userDoc != null) {
-          final userData = userDoc.data() as Map<String, dynamic>;
+        final user = await FirestoreService.getUserProfile();
+        if (user != null) {
           setState(() {
-            _profileImageUrl = userData['profileImage'] as String?;
-            _nickname = userData['nickname'] as String?;
+            _profileImageUrl = user.profileImage;
+            _nickname = user.nickname;
           });
         }
       } catch (e) {
@@ -100,61 +100,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    late final List<Map<String, dynamic>> myCapsules;
-    late final List<Map<String, dynamic>> friendCapsules;
+    late final List<Capsule> myCapsules;
+    late final List<Capsule> friendCapsules;
 
     myCapsules = widget.capsules.where((capsule) {
       final userId = _currentUser?.uid;
-      return capsule['userId'] == userId;
+      return capsule.userId == userId;
     }).toList();
 
     friendCapsules = widget.capsules.where((capsule) {
       final userId = _currentUser?.uid;
-      return capsule['userId'] != userId;
+      return capsule.userId != userId;
     }).toList();
     // 곧 만날 기억 캡슐
     final soonCapsules = myCapsules.where((capsule) {
-      final unlockDate = (capsule['canUnlockedAt'] as Timestamp).toDate();
-      final unlockedAt = (capsule['unlockedAt'] as Timestamp?)?.toDate();
+      final unlockDate = (capsule.canUnlockedAt as Timestamp).toDate();
+      final unlockedAt = (capsule.unlockedAt as Timestamp?)?.toDate();
       return unlockDate.isAfter(DateTime.now()) &&
           unlockDate.isBefore(DateTime.now().add(const Duration(days: 7))) &&
           unlockedAt == null;
     }).toList()
       ..sort((a, b) {
-        final dateA = (a['canUnlockedAt'] as Timestamp).toDate();
-        final dateB = (b['canUnlockedAt'] as Timestamp).toDate();
+        final dateA = (a.canUnlockedAt as Timestamp).toDate();
+        final dateB = (b.canUnlockedAt as Timestamp).toDate();
         return dateA.compareTo(dateB);
       });
 
     // 내가 연 기억 캡슐
     final openedCapsules = myCapsules.where((capsule) {
-      final unlockedAt = (capsule['unlockedAt'] as Timestamp?)?.toDate();
+      final unlockedAt = (capsule.unlockedAt as Timestamp?)?.toDate();
       return unlockedAt != null;
     }).toList()
       ..sort((a, b) {
-        final dateA =
-            (a['unlockedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-        final dateB =
-            (b['unlockedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final dateA = (a.unlockedAt as Timestamp?)?.toDate() ?? DateTime.now();
+        final dateB = (b.unlockedAt as Timestamp?)?.toDate() ?? DateTime.now();
         return dateB.compareTo(dateA); // 최근에 연 캡슐 순으로 정렬
       });
 
     // 열지 않은 기억 캡슐
     final overdueCapsules = myCapsules.where((capsule) {
-      final unlockDate = (capsule['canUnlockedAt'] as Timestamp).toDate();
-      final unlockedAt = (capsule['unlockedAt'] as Timestamp?)?.toDate();
+      final unlockDate = (capsule.canUnlockedAt as Timestamp).toDate();
+      final unlockedAt = (capsule.unlockedAt as Timestamp?)?.toDate();
       return unlockDate.isBefore(DateTime.now()) && unlockedAt == null;
     }).toList()
       ..sort((a, b) {
-        final dateA = (a['canUnlockedAt'] as Timestamp).toDate();
-        final dateB = (b['canUnlockedAt'] as Timestamp).toDate();
+        final dateA = (a.canUnlockedAt as Timestamp).toDate();
+        final dateB = (b.canUnlockedAt as Timestamp).toDate();
         return dateA.compareTo(dateB); // 가장 오래된 캡슐 순으로 정렬
       });
 
     // 공유 받은 기억 캡슐
     friendCapsules.sort((a, b) {
-      final dateA = (a['uploadedAt'] as Timestamp).toDate();
-      final dateB = (b['uploadedAt'] as Timestamp).toDate();
+      final dateA = (a.uploadedAt as Timestamp).toDate();
+      final dateB = (b.uploadedAt as Timestamp).toDate();
       return dateB.compareTo(dateA); // 최근에 생성된 캡슐 순으로 정렬
     });
 

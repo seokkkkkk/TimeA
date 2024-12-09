@@ -4,10 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
+import 'package:timea/core/model/capsule.dart';
+import 'package:timea/core/utils/api_client.dart';
 
 class CapsuleService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final apiClient = ApiClient();
 
   Future<String?> uploadImage(String userId, XFile image,
       {int minHeight = 1920, int minWidth = 1080, int quality = 85}) async {
@@ -45,33 +47,38 @@ class CapsuleService {
   }
 
   Future<String> saveCapsuleData({
-    required String userId,
     required String title,
     required String content,
     required String imageUrl,
     required GeoPoint location,
+    required String userId,
     required DateTime canUnlockedAt,
-    List sharedWith = const [],
+    List<String> sharedWith = const [],
   }) async {
-    try {
-      // 데이터를 Firestore에 추가하고 문서 참조를 반환받습니다.
-      final docRef = await _firestore.collection('capsules').add({
-        'title': title,
-        'content': content.isEmpty ? null : content,
-        'imageUrl': imageUrl.isEmpty ? null : imageUrl,
-        'location': location,
-        'userId': userId,
-        'canUnlockedAt': Timestamp.fromDate(canUnlockedAt),
-        'uploadedAt': Timestamp.now(),
-        'unlockedAt': null, // 처음엔 null
-        'sharedWith': sharedWith,
-      });
+    const path = '/capsules';
 
-      // 자동 생성된 문서 ID 반환
-      return docRef.id;
+    Capsule capsule = Capsule(
+      id: '',
+      title: title,
+      content: content,
+      imageUrl: imageUrl,
+      sharedWith: sharedWith,
+      canUnlockedAt: canUnlockedAt,
+      unlockedAt: null,
+      uploadedAt: DateTime.now(),
+      userId: userId,
+      location: location,
+    );
+
+    final body = {
+      "fields": capsule.toJson(),
+    };
+
+    try {
+      final response = await apiClient.post(path, body);
+      return response['name'].split('/').last;
     } catch (e) {
-      SnackbarUtil.showError('캡슐 저장 실패', '캡슐 데이터를 저장하는 중 문제가 발생했습니다: $e');
-      rethrow;
+      throw Exception('캡슐 저장 실패: $e');
     }
   }
 }

@@ -1,70 +1,129 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:timea/core/model/capsule.dart';
+import 'package:timea/core/model/user.dart';
+import 'package:timea/core/utils/api_client.dart';
+import 'package:timea/core/utils/format_util.dart';
 
 class FirestoreService {
   static final _firestore = FirebaseFirestore.instance;
+  static final apiClient = ApiClient();
 
-  // Firestore에서 사용자 정보 가져오기
-  static Future<DocumentSnapshot?> getUserProfile() async {
-    try {
-      final userDoc = await _firestore
-          .collection('users')
-          .doc(FirebaseAuth.instance.currentUser!.uid)
-          .get();
+  static Future<UserModel?> getUserProfile() async {
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+    final response = await apiClient.get('/users/$userId');
+    if (response == null) throw Exception('사용자 정보를 찾을 수 없습니다.');
 
-      return userDoc.exists ? userDoc : null;
-    } catch (e) {
-      throw Exception('프로필 데이터 로드 실패: $e');
-    }
+    return UserModel.fromJson(userId.toString(), response);
   }
 
   // 닉네임 중복 확인
   static Future<bool> isNicknameExists(String nickname) async {
     try {
-      final querySnapshot = await _firestore
-          .collection('users')
-          .where('nickname', isEqualTo: nickname)
-          .get();
+      // 필터링을 위한 Firestore REST API 쿼리 요청 구성
+      const path = ':runQuery';
+      final requestBody = {
+        "structuredQuery": {
+          "from": [
+            {"collectionId": "users"}
+          ],
+          "where": {
+            "fieldFilter": {
+              "field": {"fieldPath": "nickname"},
+              "op": "EQUAL",
+              "value": {"stringValue": nickname}
+            }
+          },
+          "limit": 1
+        }
+      };
 
-      return querySnapshot.docs.isNotEmpty;
+      final response = await apiClient.post(path, requestBody);
+
+      if (response != null && response is List) {
+        // 문서가 없을 때는 readTime만 포함된 요소가 반환됨
+        bool documentExists =
+            response.any((doc) => doc.containsKey('document'));
+        return documentExists;
+      }
+
+      return false; // 응답이 비어있으면 중복 아님
     } catch (e) {
       throw Exception('닉네임 중복 확인 실패: $e');
     }
   }
 
-  // Firestore에 사용자 정보 저장
   static Future<void> updateUserProfile({
-    required User user,
-    required String nickname,
-    required String profileImage,
+    required String userId,
+    String? nickname,
+    String? profileImage,
   }) async {
     try {
-      final data = <String, dynamic>{};
-      if (profileImage.isNotEmpty) {
-        data['profileImage'] = profileImage;
-      }
-      if (nickname.isNotEmpty) {
-        data['nickname'] = nickname;
-      }
-      data['updatedAt'] = Timestamp.now();
+      final path = '/users/$userId';
+      final fieldsToUpdate = <String, dynamic>{};
+      final updateMask = <String>[];
 
-      await _firestore.collection('users').doc(user.uid).update(data);
+      // 업데이트할 필드 추가
+      if (nickname != null && nickname.isNotEmpty) {
+        fieldsToUpdate['nickname'] = {"stringValue": nickname};
+        updateMask.add('nickname');
+      }
+
+      if (profileImage != null && profileImage.isNotEmpty) {
+        fieldsToUpdate['profileImage'] = {"stringValue": profileImage};
+        updateMask.add('profileImage');
+      }
+
+      fieldsToUpdate['updatedAt'] = {
+        "timestampValue": DateTime.now().toUtc().toIso8601String(),
+      };
+      updateMask.add('updatedAt');
+
+      // 쿼리 파라미터에 updateMask 추가
+      final queryParameters = {'updateMask.fieldPaths': updateMask};
+
+      // 요청 Body
+      final body = {"fields": fieldsToUpdate};
+
+      await apiClient.update(path, body, queryParameters: queryParameters);
     } catch (e) {
-      throw Exception('프로필 저장 실패: $e');
+      throw Exception('프로필 업데이트 실패: $e');
     }
   }
 
   // 닉네임으로 사용자 찾기 (닉네임은 unique)
-  static Future<DocumentSnapshot?> findUserByNickname(String nickname) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection('users')
-          .where('nickname', isEqualTo: nickname)
-          .get();
+  static Future<UserModel> findUserByNickname(String nickname) async {
+    const path = ':runQuery';
+    final requestBody = {
+      "structuredQuery": {
+        "from": [
+          {"collectionId": "users"}
+        ],
+        "where": {
+          "fieldFilter": {
+            "field": {"fieldPath": "nickname"},
+            "op": "EQUAL",
+            "value": {"stringValue": nickname}
+          }
+        },
+        "limit": 1
+      }
+    };
 
-      return querySnapshot.docs.isNotEmpty ? querySnapshot.docs.first : null;
+    try {
+      final response = await apiClient.post(path, requestBody);
+
+      if (response is List && response.isNotEmpty) {
+        final document = response.first['document'];
+        final String userId = document['name'].split('/').last;
+        final Map<String, dynamic> fields = document;
+
+        return UserModel.fromJson(userId, fields);
+      } else {
+        throw Exception('사용자를 찾을 수 없습니다.');
+      }
     } catch (e) {
-      throw Exception('사용자를 찾을 수 없습니다');
+      throw Exception('사용자를 찾을 수 없습니다.');
     }
   }
 
@@ -385,53 +444,54 @@ class FirestoreService {
     }
   }
 
-  static Future<String> saveCapsule({
-    required String title,
-    required String content,
-    required String imageUrl,
-    required GeoPoint location,
-    required String userId,
-    required DateTime canUnlockedAt,
-    List<String> sharedWith = const [],
-  }) async {
-    final capsulesRef = _firestore.collection('capsules');
-
-    try {
-      return await capsulesRef.add({
-        'title': title,
-        'content': content,
-        'image': imageUrl,
-        'location': location,
-        'sharedWith': [], // 빈 배열
-        'canUnlockedAt': Timestamp.fromDate(canUnlockedAt),
-        'uploadedAt': Timestamp.now(),
-        'unlockedAt': null, // null
-        'userId': userId,
-      }).then((doc) => doc.id);
-    } catch (e) {
-      throw Exception('캡슐 저장 실패: $e');
-    }
-  }
-
-  static Future<List<Map<String, dynamic>>> getAllCapsules() async {
+  static Future<List<Capsule>> getAllCapsules() async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
-    try {
-      final querySnapshot = await _firestore
-          .collection('capsules')
-          .where(
-            Filter.or(
-              Filter('userId', isEqualTo: currentUserId),
-              Filter('sharedWith', arrayContains: currentUserId),
-            ),
-          )
-          .get();
+    final query = {
+      "structuredQuery": {
+        "from": [
+          {"collectionId": "capsules"}
+        ],
+        "where": {
+          "compositeFilter": {
+            "op": "OR",
+            "filters": [
+              {
+                "fieldFilter": {
+                  "field": {"fieldPath": "userId"},
+                  "op": "EQUAL",
+                  "value": {"stringValue": currentUserId}
+                }
+              },
+              {
+                "fieldFilter": {
+                  "field": {"fieldPath": "sharedWith"},
+                  "op": "ARRAY_CONTAINS",
+                  "value": {"stringValue": currentUserId}
+                }
+              }
+            ]
+          }
+        }
+      }
+    };
 
-      return querySnapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id; // 문서 ID 추가
-        return data;
+    try {
+      // Firestore REST API 요청
+      final response = await apiClient.post(
+        ':runQuery', // Firestore REST API의 쿼리 실행 경로
+        query,
+      );
+
+      // 결과 파싱
+      final capsules = (response as List)
+          .where((doc) => doc['document'] != null) // document가 null인 경우 제외
+          .map((doc) {
+        final data = doc['document']['fields'];
+        final id = doc['document']['name'].split('/').last;
+        return Capsule.fromJson(id, {"fields": data});
       }).toList();
+      return capsules;
     } catch (e) {
       throw Exception('캡슐 목록을 가져오는 데 실패했습니다: $e');
     }
@@ -451,26 +511,28 @@ class FirestoreService {
   }
 
   /// 캡슐 상태 업데이트
-  static Future<Map<String, dynamic>> updateCapsuleStatus({
+  static Future<Capsule> updateCapsuleStatus({
     required String capsuleId, // 캡슐 ID
     required DateTime unlockedAt, // 캡슐 해제 시간
   }) async {
-    final capsuleRef = _firestore.collection('capsules').doc(capsuleId);
+    final path = '/capsules/$capsuleId';
+    final fieldsToUpdate = <String, dynamic>{
+      'unlockedAt': {'timestampValue': FormatUtil.formatTimestamp(unlockedAt)},
+      'updatedAt': {
+        'timestampValue': FormatUtil.formatTimestamp(DateTime.now())
+      },
+    };
+    final body = {'fields': fieldsToUpdate};
+    final queryParmeters = {
+      'updateMask.fieldPaths': ['unlockedAt', 'updatedAt']
+    };
 
     try {
-      await capsuleRef.update({
-        'unlockedAt': Timestamp.fromDate(unlockedAt),
-      });
+      final response =
+          await apiClient.update(path, body, queryParameters: queryParmeters);
 
-      final newCapsule = capsuleRef.get().then(
-        (doc) {
-          final capsule = doc.data();
-          capsule!['id'] = doc.id; // 문서 ID를 추가
-          return capsule;
-        },
-      );
-
-      return newCapsule;
+      final Capsule capsule = Capsule.fromJson(capsuleId, response);
+      return capsule;
     } catch (e) {
       throw Exception('캡슐 상태 업데이트 실패: $e');
     }

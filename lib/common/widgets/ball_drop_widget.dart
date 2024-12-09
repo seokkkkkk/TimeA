@@ -7,13 +7,14 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:timea/common/widgets/capsule_dialog.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
+import 'package:timea/core/model/capsule.dart';
 import 'package:timea/core/services/firestore_service.dart';
 import 'dart:math';
 import 'ball_physics.dart';
 import 'package:timea/common/widgets/ball_painter.dart';
 
 class BallDropWidget extends StatefulWidget {
-  final List<Map<String, dynamic>> capsules;
+  final List<Capsule> capsules;
   final Function updateCapsules;
   const BallDropWidget(
       {super.key, required this.capsules, required this.updateCapsules});
@@ -249,7 +250,7 @@ class _BallDropWidgetState extends State<BallDropWidget>
                 );
                 final newCapsules = widget.capsules
                     .map((capsule) =>
-                        capsule['id'] == ball.id ? newCapsule : capsule)
+                        capsule.id == ball.id ? newCapsule : capsule)
                     .toList();
                 widget.updateCapsules(newCapsules);
 

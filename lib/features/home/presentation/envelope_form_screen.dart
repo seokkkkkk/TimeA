@@ -9,14 +9,15 @@ import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/common/widgets/envelope_animation.dart';
 import 'package:timea/common/widgets/snack_bar_util.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
+import 'package:timea/core/model/capsule.dart';
 import 'package:timea/core/services/firebase_auth_service.dart';
 import 'package:timea/core/services/firestore_service.dart';
 import 'package:timea/features/home/service/capsule_service.dart';
 import 'package:timea/features/map/presentation/map_screen.dart';
 
 class EnvelopeFormScreen extends StatefulWidget {
-  final Function(Map<String, dynamic>) onSubmit;
-  final List<Map<String, dynamic>> capsules;
+  final Function(Capsule) onSubmit;
+  final List<Capsule> capsules;
 
   const EnvelopeFormScreen(
       {super.key, required this.onSubmit, required this.capsules});
@@ -234,7 +235,8 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
       isSubmitting = true;
     });
 
-    final sharedWith = selectedFriends.map((friend) => friend['id']).toList();
+    final List<String> sharedWith =
+        selectedFriends.map((friend) => friend['id'].toString()).toList();
 
     Get.to(() => const EnvelopeAnimation());
 
@@ -258,19 +260,20 @@ class _EnvelopeFormScreenState extends State<EnvelopeFormScreen> {
         sharedWith: sharedWith,
       );
 
-      widget.onSubmit({
-        'id': capsuleId,
-        'title': _titleController.text,
-        'content': _textContentController.text,
-        'image': imageUrl,
-        'location': GeoPoint(
+      widget.onSubmit(Capsule(
+        id: capsuleId,
+        userId: userId,
+        title: _titleController.text,
+        content: _textContentController.text,
+        imageUrl: imageUrl,
+        location: GeoPoint(
           _geolocationController.currentPosition.value!.latitude,
           _geolocationController.currentPosition.value!.longitude,
         ),
-        'userId': userId,
-        'canUnlockedAt': Timestamp.fromDate(openDate!),
-        'sharedWith': sharedWith,
-      });
+        uploadedAt: DateTime.now(),
+        canUnlockedAt: openDate!,
+        sharedWith: sharedWith,
+      ));
       SnackbarUtil.showSuccess('성공', '캡슐 저장이 완료되었습니다!');
     } catch (e) {
       SnackbarUtil.showError('실패', '캡슐 저장 중 문제가 발생했습니다: $e');

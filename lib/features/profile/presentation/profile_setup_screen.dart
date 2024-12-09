@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -22,7 +21,6 @@ class ProfileSetupScreen extends StatefulWidget {
 
 class ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _nicknameController = TextEditingController();
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   final ImagePicker _picker = ImagePicker();
   String? _profileImageUrl; // 프로필 이미지 URL
   XFile? _selectedImage; // 선택한 이미지 파일
@@ -164,9 +162,9 @@ class ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
       if (widget.backButtonVisible) {
         await FirestoreService.updateUserProfile(
-          user: user,
+          userId: user.uid,
           nickname: _nicknameController.text.trim(),
-          profileImage: _profileImageUrl!,
+          profileImage: _profileImageUrl,
         );
       } else {
         await FirebaseAuthService.saveUserToFirestore(

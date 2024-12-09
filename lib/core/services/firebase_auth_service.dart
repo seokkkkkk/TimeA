@@ -40,9 +40,6 @@ class FirebaseAuthService {
       ],
     );
 
-    print(appleAuth.email);
-    print(appleAuth.familyName);
-
     final OAuthCredential credential = OAuthProvider('apple.com').credential(
       idToken: appleAuth.identityToken,
       accessToken: appleAuth.authorizationCode,
@@ -127,5 +124,25 @@ class FirebaseAuthService {
         });
       } else {}
     } else {}
+  }
+
+  // idToken 가져오기
+  Future<String?> getIdToken() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return null;
+    }
+
+    return await user.getIdToken();
+  }
+
+  // userId 가져오기
+  Future<String?> getUserId() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return null;
+    }
+
+    return user.uid;
   }
 }

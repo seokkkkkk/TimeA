@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:timea/core/model/capsule.dart';
 
 class CardBuilder extends StatelessWidget {
-  final List<Map<String, dynamic>> capsules;
+  final List<Capsule> capsules;
   final String Function(DateTime) calculateDday;
 
   const CardBuilder({
@@ -77,11 +78,11 @@ class CardBuilder extends StatelessWidget {
       controller: PageController(viewportFraction: 0.6),
       itemBuilder: (context, index) {
         final capsule = capsules[index];
-        final unlockDate = (capsule['canUnlockedAt'] as Timestamp).toDate();
-        final isUnlocked = capsule['unlockedAt'] != null;
-        final imageUrl = capsule['imageUrl'] ?? '';
-        final content = capsule['content'] ?? '';
-        final title = capsule['title'] ?? '';
+        final unlockDate = (capsule.canUnlockedAt as Timestamp).toDate();
+        final isUnlocked = capsule.unlockedAt != null;
+        final imageUrl = capsule.imageUrl ?? '';
+        final content = capsule.content;
+        final title = capsule.title;
 
         return GestureDetector(
           onTap: () {
@@ -138,7 +139,7 @@ class CardBuilder extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        capsule['title'] ?? '제목 없음',
+                        capsule.title,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

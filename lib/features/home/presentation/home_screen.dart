@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/common/widgets/ball_drop_widget.dart';
+import 'package:timea/core/model/capsule.dart';
 import 'package:timea/features/home/presentation/envelope_form_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  final List<Map<String, dynamic>> capsules;
+  final List<Capsule> capsules;
   final bool isLoading;
-  final Function(Map<String, dynamic>) onAddCapsule;
+  final Function(Capsule) onAddCapsule;
   final Function updateCapsules;
   const HomeScreen({
     super.key,

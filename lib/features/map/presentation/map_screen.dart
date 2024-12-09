@@ -8,10 +8,11 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:get/get.dart';
 import 'package:timea/common/widgets/capsule_dialog.dart';
 import 'package:timea/core/controllers/geolocation_controller.dart';
+import 'package:timea/core/model/capsule.dart';
 import 'package:timea/core/services/firestore_service.dart';
 
 class MapScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> capsules;
+  final List<Capsule> capsules;
   final Function updateCapsules;
   final bool canTap;
 
@@ -188,25 +189,24 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Future<void> _generateMarkerIcons(
-      final List<Map<String, dynamic>> newCapsules) async {
+  Future<void> _generateMarkerIcons(final List<Capsule> newCapsules) async {
     final markers = <Marker>{};
     for (final capsule in newCapsules) {
-      if (capsule['location'] == null || capsule['canUnlockedAt'] == null) {
+      if (capsule.unlockedAt == null) {
         continue; // 데이터가 유효하지 않으면 건너뜁니다.
       }
 
       final icon = await _buildMarkerIcon(
-        capsule['unlockedAt'] != null,
-        capsule['location'],
-        capsule['canUnlockedAt'].toDate(),
+        capsule.unlockedAt != null,
+        capsule.location,
+        capsule.canUnlockedAt,
       );
       markers.add(
         Marker(
-          markerId: MarkerId(capsule['id']),
+          markerId: MarkerId(capsule.id),
           position: LatLng(
-            capsule['location'].latitude,
-            capsule['location'].longitude,
+            capsule.location.latitude,
+            capsule.location.longitude,
           ),
           icon: icon,
           onTap: () {
@@ -256,11 +256,11 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  void _onMarkerTap(Map<String, dynamic> capsule) async {
+  void _onMarkerTap(Capsule capsule) async {
     final GoogleMapController controller = await _controller.future;
     final markerPosition = LatLng(
-      capsule['location'].latitude,
-      capsule['location'].longitude,
+      capsule.location.latitude,
+      capsule.location.longitude,
     );
 
     controller.animateCamera(
@@ -297,25 +297,24 @@ class _MapScreenState extends State<MapScreen> {
       builder: (context) {
         return Obx(() {
           return CapsuleDetailsDialog(
-            title: capsule['title'],
-            content: capsule['unlockedAt'] != null ? capsule['content'] : null,
-            imageUrl:
-                capsule['unlockedAt'] != null ? capsule['imageUrl'] : null,
-            date: capsule['canUnlockedAt'].toDate(),
+            title: capsule.title,
+            content: capsule.unlockedAt != null ? capsule.content : null,
+            imageUrl: capsule.unlockedAt != null ? capsule.imageUrl : null,
+            date: capsule.canUnlockedAt,
             locationMessage: locationMessage,
             locationString: locationMessage.value,
-            isUnlocked: capsule['unlockedAt'] != null,
-            isUnlockable: (capsule['unlockedAt'] == null) &&
-                capsule['canUnlockedAt'].toDate().isBefore(DateTime.now()) &&
+            isUnlocked: capsule.unlockedAt != null,
+            isUnlockable: (capsule.unlockedAt == null) &&
+                capsule.canUnlockedAt.isBefore(DateTime.now()) &&
                 locationMessage.value.contains('기억 캡슐이 근처에 있습니다.'),
             onUnlock: () async {
               try {
                 final newCapule = await FirestoreService.updateCapsuleStatus(
-                  capsuleId: capsule['id'],
+                  capsuleId: capsule.id,
                   unlockedAt: DateTime.now(),
                 );
                 final newCapsules = widget.capsules
-                    .map((c) => c['id'] == newCapule['id'] ? newCapule : c)
+                    .map((c) => c.id == newCapule.id ? newCapule : c)
                     .toList();
                 widget.updateCapsules(newCapsules);
                 widget.capsules.clear();

@@ -58,8 +58,6 @@ class LoginScreen extends StatelessWidget {
       }
     } catch (e) {
       SnackbarUtil.showError('Apple 로그인 실패', e.toString());
-
-      print(e);
     }
   }
 

@@ -59,10 +59,6 @@ class _FriendScreenState extends State<FriendScreen> {
     try {
       final targetUser = await FirestoreService.findUserByNickname(
           _nicknameController.text.trim());
-      if (targetUser == null) {
-        _showSnackbar('오류', '해당 닉네임의 사용자를 찾을 수 없습니다.');
-        return;
-      }
       await FirestoreService.sendFriendRequest(targetUser.id);
       _showSnackbar('성공', '친구 요청을 보냈습니다.');
       _nicknameController.clear();

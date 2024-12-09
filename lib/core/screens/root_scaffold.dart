@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timea/common/controllers/navigtaion_bar_controller.dart';
 import 'package:timea/common/widgets/navigation_bar.dart';
+import 'package:timea/core/model/capsule.dart';
 import 'package:timea/core/services/firestore_service.dart';
 import 'package:timea/features/home/presentation/home_screen.dart';
 import 'package:timea/features/map/presentation/map_screen.dart';
@@ -15,7 +16,7 @@ class RootScaffold extends StatefulWidget {
 }
 
 class _RootScaffoldState extends State<RootScaffold> {
-  List<Map<String, dynamic>> capsules = []; // 캡슐 데이터
+  List<Capsule> capsules = []; // 캡슐 데이터
   Map<String, dynamic> userInfo = {}; // 유저 정보
   bool isLoading = true;
 
@@ -28,8 +29,7 @@ class _RootScaffoldState extends State<RootScaffold> {
 
   Future<void> _loadCapsules() async {
     try {
-      List<Map<String, dynamic>> updatedCapsules =
-          await FirestoreService.getAllCapsules();
+      List<Capsule> updatedCapsules = await FirestoreService.getAllCapsules();
       setState(() {
         capsules = updatedCapsules;
       });
@@ -42,13 +42,13 @@ class _RootScaffoldState extends State<RootScaffold> {
     }
   }
 
-  void updateCapsules(List<Map<String, dynamic>> updatedCapsules) {
+  void updateCapsules(List<Capsule> updatedCapsules) {
     setState(() {
       capsules = updatedCapsules;
     });
   }
 
-  void _addCapsule(Map<String, dynamic> newCapsule) {
+  void _addCapsule(Capsule newCapsule) {
     setState(() {
       capsules.add(newCapsule); // 새로운 캡슐 추가
     });
