@@ -108,25 +108,24 @@ class _BallDropWidgetState extends State<BallDropWidget>
     });
   }
 
-  void _initializeBalls(capsules) {
+  void _initializeBalls(List<Capsule> capsules) {
     _balls.clear();
     for (final capsule in capsules) {
-      if (capsule == null) continue;
       _addNewBall(capsule);
     }
   }
 
-  void _addNewBall(capsule) {
+  void _addNewBall(Capsule capsule) {
     final randomOffsetX = (Random().nextDouble() - 0.5) * 50;
     final randomOffsetY = Random().nextDouble() * 50 + 100;
 
     final newBall = BallPhysics(
-      id: capsule['id'],
-      title: capsule['title'],
-      content: capsule['content'],
-      imageUrl: capsule['imageUrl'] ?? '',
+      id: capsule.id,
+      title: capsule.title,
+      content: capsule.content,
+      imageUrl: capsule.imageUrl ?? '',
       radius: ballRadius,
-      isUnlocked: capsule['unlockedAt'] != null,
+      isUnlocked: capsule.unlockedAt != null,
       userPosition: Offset(
         currentPosition?.longitude ?? 0,
         currentPosition?.latitude ?? 0,
@@ -136,10 +135,10 @@ class _BallDropWidgetState extends State<BallDropWidget>
         Random().nextDouble() * 100,
       ),
       velocity: Offset(randomOffsetX, randomOffsetY),
-      date: (capsule['canUnlockedAt'] as Timestamp).toDate(),
+      date: capsule.canUnlockedAt,
       gpsCoordinates: Offset(
-        capsule['location'].longitude,
-        capsule['location'].latitude,
+        capsule.location.longitude,
+        capsule.location.latitude,
       ),
     );
 

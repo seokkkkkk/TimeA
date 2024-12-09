@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:timea/common/widgets/app_bar.dart';
 import 'package:timea/core/model/capsule.dart';
 import 'package:timea/core/services/firebase_auth_service.dart';
@@ -114,45 +113,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }).toList();
     // 곧 만날 기억 캡슐
     final soonCapsules = myCapsules.where((capsule) {
-      final unlockDate = (capsule.canUnlockedAt as Timestamp).toDate();
-      final unlockedAt = (capsule.unlockedAt as Timestamp?)?.toDate();
+      final unlockDate = capsule.canUnlockedAt;
+      final unlockedAt = capsule.unlockedAt;
       return unlockDate.isAfter(DateTime.now()) &&
           unlockDate.isBefore(DateTime.now().add(const Duration(days: 7))) &&
           unlockedAt == null;
     }).toList()
       ..sort((a, b) {
-        final dateA = (a.canUnlockedAt as Timestamp).toDate();
-        final dateB = (b.canUnlockedAt as Timestamp).toDate();
+        final dateA = a.canUnlockedAt;
+        final dateB = b.canUnlockedAt;
         return dateA.compareTo(dateB);
       });
 
     // 내가 연 기억 캡슐
     final openedCapsules = myCapsules.where((capsule) {
-      final unlockedAt = (capsule.unlockedAt as Timestamp?)?.toDate();
+      final unlockedAt = capsule.unlockedAt;
       return unlockedAt != null;
     }).toList()
       ..sort((a, b) {
-        final dateA = (a.unlockedAt as Timestamp?)?.toDate() ?? DateTime.now();
-        final dateB = (b.unlockedAt as Timestamp?)?.toDate() ?? DateTime.now();
+        final dateA = a.unlockedAt ?? DateTime.now();
+        final dateB = b.unlockedAt ?? DateTime.now();
         return dateB.compareTo(dateA); // 최근에 연 캡슐 순으로 정렬
       });
 
     // 열지 않은 기억 캡슐
     final overdueCapsules = myCapsules.where((capsule) {
-      final unlockDate = (capsule.canUnlockedAt as Timestamp).toDate();
-      final unlockedAt = (capsule.unlockedAt as Timestamp?)?.toDate();
+      final unlockDate = capsule.canUnlockedAt;
+      final unlockedAt = capsule.unlockedAt;
       return unlockDate.isBefore(DateTime.now()) && unlockedAt == null;
     }).toList()
       ..sort((a, b) {
-        final dateA = (a.canUnlockedAt as Timestamp).toDate();
-        final dateB = (b.canUnlockedAt as Timestamp).toDate();
+        final dateA = a.canUnlockedAt;
+        final dateB = b.canUnlockedAt;
         return dateA.compareTo(dateB); // 가장 오래된 캡슐 순으로 정렬
       });
 
     // 공유 받은 기억 캡슐
     friendCapsules.sort((a, b) {
-      final dateA = (a.uploadedAt as Timestamp).toDate();
-      final dateB = (b.uploadedAt as Timestamp).toDate();
+      final dateA = a.uploadedAt;
+      final dateB = b.uploadedAt;
       return dateB.compareTo(dateA); // 최근에 생성된 캡슐 순으로 정렬
     });
 

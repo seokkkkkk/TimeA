@@ -6,7 +6,6 @@ import 'package:timea/core/utils/api_client.dart';
 import 'package:timea/core/utils/format_util.dart';
 
 class FirestoreService {
-  static final _firestore = FirebaseFirestore.instance;
   static final apiClient = ApiClient();
 
   static Future<UserModel?> getUserProfile() async {
@@ -75,7 +74,7 @@ class FirestoreService {
       }
 
       fieldsToUpdate['updatedAt'] = {
-        "timestampValue": DateTime.now().toUtc().toIso8601String(),
+        "timestampValue": FormatUtil.formatTimestamp(DateTime.now())
       };
       updateMask.add('updatedAt');
 
@@ -130,73 +129,140 @@ class FirestoreService {
   // 친구 요청 보내기
   static Future<void> sendFriendRequest(String targetUserId) async {
     final currentUser = FirebaseAuth.instance.currentUser!;
-    final currentUserId = currentUser.uid;
+    const checkPath = ':runQuery';
+    const createPath = '/friendships';
 
-    if (currentUserId == targetUserId) {
-      throw Exception('자기 자신에게 친구 요청을 보낼 수 없습니다.');
+    try {
+      // 1. 중복 친구 요청 확인 쿼리
+      final query = {
+        "structuredQuery": {
+          "from": [
+            {"collectionId": "friendships"}
+          ],
+          "where": {
+            "compositeFilter": {
+              "op": "AND",
+              "filters": [
+                {
+                  "compositeFilter": {
+                    "op": "OR",
+                    "filters": [
+                      {
+                        "compositeFilter": {
+                          "op": "AND",
+                          "filters": [
+                            {
+                              "fieldFilter": {
+                                "field": {"fieldPath": "userId1"},
+                                "op": "EQUAL",
+                                "value": {"stringValue": currentUser.uid}
+                              }
+                            },
+                            {
+                              "fieldFilter": {
+                                "field": {"fieldPath": "userId2"},
+                                "op": "EQUAL",
+                                "value": {"stringValue": targetUserId}
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "compositeFilter": {
+                          "op": "AND",
+                          "filters": [
+                            {
+                              "fieldFilter": {
+                                "field": {"fieldPath": "userId1"},
+                                "op": "EQUAL",
+                                "value": {"stringValue": targetUserId}
+                              }
+                            },
+                            {
+                              "fieldFilter": {
+                                "field": {"fieldPath": "userId2"},
+                                "op": "EQUAL",
+                                "value": {"stringValue": currentUser.uid}
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "fieldFilter": {
+                    "field": {"fieldPath": "status"},
+                    "op": "IN",
+                    "value": {
+                      "arrayValue": {
+                        "values": [
+                          {"stringValue": "pending"},
+                          {"stringValue": "accepted"}
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      };
+
+      // 2. 중복 친구 요청 확인
+      final response = await apiClient.post(checkPath, query);
+
+      // 'readTime' 제거 및 'document'가 있는 항목만 확인
+      final validDocuments =
+          (response as List).where((doc) => doc['document'] != null).toList();
+
+      if (validDocuments.isEmpty) {
+        // 3. 친구 요청 생성
+        final body = {
+          'fields': {
+            'userId1': {'stringValue': currentUser.uid},
+            'userId2': {'stringValue': targetUserId},
+            'status': {'stringValue': 'pending'},
+            'createdAt': {
+              'timestampValue': FormatUtil.formatTimestamp(DateTime.now())
+            },
+            'updatedAt': {
+              'timestampValue': FormatUtil.formatTimestamp(DateTime.now())
+            },
+          }
+        };
+
+        await apiClient.post(createPath, body);
+      } else {
+        throw Exception('이미 친구 요청을 보냈거나 친구 관계가 있습니다.');
+      }
+    } catch (e) {
+      throw Exception('친구 요청 보내기 실패: $e');
     }
-
-    final friendshipsRef = _firestore.collection('friendships');
-
-    // 이미 친구인지 확인 (양방향 확인)
-    final existingFriendship = await friendshipsRef
-        .where('status', isEqualTo: 'accepted')
-        .where(
-          Filter.or(
-            Filter.and(Filter('userId1', isEqualTo: currentUserId),
-                Filter('userId2', isEqualTo: targetUserId)),
-            Filter.and(Filter('userId1', isEqualTo: targetUserId),
-                Filter('userId2', isEqualTo: currentUserId)),
-          ),
-        )
-        .get();
-
-    if (existingFriendship.docs.isNotEmpty) {
-      throw Exception('이미 친구입니다.');
-    }
-
-    // 상대방이 나에게 친구 요청을 보냈는지 확인
-    final incomingRequest = await friendshipsRef
-        .where('userId1', isEqualTo: targetUserId)
-        .where('userId2', isEqualTo: currentUserId)
-        .where('status', isEqualTo: 'pending')
-        .get();
-
-    if (incomingRequest.docs.isNotEmpty) {
-      // 상대방이 보낸 요청을 수락
-      await acceptFriendRequest(incomingRequest.docs.first.id);
-      return;
-    }
-
-    // 내가 상대방에게 보낸 요청이 이미 있는지 확인
-    final outgoingRequest = await friendshipsRef
-        .where('userId1', isEqualTo: currentUserId)
-        .where('userId2', isEqualTo: targetUserId)
-        .where('status', whereIn: ['pending', 'accepted']).get();
-
-    if (outgoingRequest.docs.isNotEmpty) {
-      throw Exception('이미 친구 요청을 보냈거나 수락된 상태입니다.');
-    }
-
-    // 새로운 친구 요청 생성
-    await friendshipsRef.add({
-      'userId1': currentUserId,
-      'userId2': targetUserId,
-      'status': 'pending',
-      'createdAt': Timestamp.now(),
-      'updatedAt': Timestamp.now(),
-    });
   }
 
   // 친구 요청 수락
   static Future<void> acceptFriendRequest(String requestId) async {
-    final friendshipRef = _firestore.collection('friendships').doc(requestId);
+    final path = '/friendships/$requestId';
+
+    final body = {
+      'fields': {
+        'status': {'stringValue': 'accepted'},
+        'updatedAt': {
+          'timestampValue': FormatUtil.formatTimestamp(DateTime.now())
+        },
+      }
+    };
+
+    final queryParameters = {
+      'updateMask.fieldPaths': ['status', 'updatedAt']
+    };
 
     try {
-      await friendshipRef.update({
-        'status': 'accepted',
-        'updatedAt': Timestamp.now(),
-      });
+      await apiClient.update(path, body, queryParameters: queryParameters);
     } catch (e) {
       throw Exception('친구 요청 수락 실패: $e');
     }
@@ -204,13 +270,23 @@ class FirestoreService {
 
   // 친구 요청 거절
   static Future<void> rejectFriendRequest(String requestId) async {
-    final friendshipRef = _firestore.collection('friendships').doc(requestId);
+    final path = '/friendships/$requestId';
+
+    final body = {
+      'fields': {
+        'status': {'stringValue': 'rejected'},
+        'updatedAt': {
+          'timestampValue': FormatUtil.formatTimestamp(DateTime.now())
+        },
+      }
+    };
+
+    final queryParameters = {
+      'updateMask.fieldPaths': ['status', 'updatedAt']
+    };
 
     try {
-      await friendshipRef.update({
-        'status': 'rejected',
-        'updatedAt': Timestamp.now(),
-      });
+      await apiClient.update(path, body, queryParameters: queryParameters);
     } catch (e) {
       throw Exception('친구 요청 거절 실패: $e');
     }
@@ -218,13 +294,23 @@ class FirestoreService {
 
   // 친구 요청 취소
   static Future<void> cancelFriendRequest(String requestId) async {
-    final friendshipRef = _firestore.collection('friendships').doc(requestId);
+    final path = '/friendships/$requestId';
+
+    final body = {
+      'fields': {
+        'status': {'stringValue': 'cancelled'},
+        'updatedAt': {
+          'timestampValue': FormatUtil.formatTimestamp(DateTime.now())
+        },
+      }
+    };
+
+    final queryParameters = {
+      'updateMask.fieldPaths': ['status', 'updatedAt']
+    };
 
     try {
-      await friendshipRef.update({
-        'status': 'canceled',
-        'updatedAt': Timestamp.now(),
-      });
+      await apiClient.update(path, body, queryParameters: queryParameters);
     } catch (e) {
       throw Exception('친구 요청 취소 실패: $e');
     }
@@ -234,39 +320,64 @@ class FirestoreService {
   static Future<List<Map<String, dynamic>>> getFriendRequests() async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
+    const path = ':runQuery';
+
+    final query = {
+      'structuredQuery': {
+        'from': [
+          {'collectionId': 'friendships'}
+        ],
+        "where": {
+          "compositeFilter": {
+            "op": "AND",
+            "filters": [
+              {
+                "fieldFilter": {
+                  "field": {"fieldPath": "userId1"},
+                  "op": "EQUAL",
+                  "value": {"stringValue": currentUserId}
+                }
+              },
+              {
+                "fieldFilter": {
+                  "field": {"fieldPath": "status"},
+                  "op": "EQUAL",
+                  "value": {"stringValue": "pending"}
+                }
+              }
+            ]
+          }
+        }
+      }
+    };
+
     try {
-      // 친구 요청 가져오기
-      final querySnapshot = await _firestore
-          .collection('friendships')
-          .where('userId1', isEqualTo: currentUserId)
-          .where('status', isEqualTo: 'pending')
-          .get();
+      final response = await apiClient.post(path, query);
 
-      if (querySnapshot.docs.isEmpty) return [];
+      if (response is List) {
+        // 문서가 있는 항목만 필터링 (readTime 제외)
+        final documents =
+            response.where((doc) => doc['document'] != null).toList();
 
-      // 상대방 ID 리스트 추출
-      final targetUserIds =
-          querySnapshot.docs.map((doc) => doc['userId2']).toList();
+        // 상대방 ID 리스트 추출
+        final targetUserIds = documents.map((doc) {
+          final data = doc['document']['fields'];
+          return data['userId2']['stringValue'];
+        }).toList();
 
-      // 상대방의 프로필 정보 가져오기
-      final usersSnapshot = await _firestore
-          .collection('users')
-          .where(FieldPath.documentId, whereIn: targetUserIds)
-          .get();
+        if (targetUserIds.isEmpty) return [];
 
-      // 결과 결합: 요청 정보 + 상대방 프로필
-      return querySnapshot.docs.map((doc) {
-        final userData = usersSnapshot.docs.firstWhere(
-          (userDoc) => userDoc.id == doc['userId2'],
-        );
-        return {
-          'id': doc.id, // 친구 요청 문서 ID
-          'userId': userData.id,
-          'nickname': userData['nickname'],
-          'profileImage': userData['profileImage'],
-          'status': doc['status'],
-        };
-      }).toList();
+        // 상대방의 프로필 정보 가져오기
+        final users = await getUsersByIds(targetUserIds);
+
+        //users에 id로 request의 id를 추가
+        for (int i = 0; i < users.length; i++) {
+          users[i]['id'] = documents[i]['document']['name'].split('/').last;
+        }
+        return users;
+      } else {
+        return [];
+      }
     } catch (e) {
       throw Exception('보낸 친구 요청 목록을 가져오는 데 실패했습니다: $e');
     }
@@ -276,55 +387,109 @@ class FirestoreService {
   static Future<List<Map<String, dynamic>>> getIncomingFriendRequests() async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
+    const path = ':runQuery';
+
+    final query = {
+      'structuredQuery': {
+        'from': [
+          {'collectionId': 'friendships'}
+        ],
+        "where": {
+          "compositeFilter": {
+            "op": "AND",
+            "filters": [
+              {
+                "fieldFilter": {
+                  "field": {"fieldPath": "userId2"},
+                  "op": "EQUAL",
+                  "value": {"stringValue": currentUserId}
+                }
+              },
+              {
+                "fieldFilter": {
+                  "field": {"fieldPath": "status"},
+                  "op": "EQUAL",
+                  "value": {"stringValue": "pending"}
+                }
+              }
+            ]
+          }
+        }
+      }
+    };
+
     try {
-      // 받은 친구 요청 가져오기
-      final querySnapshot = await _firestore
-          .collection('friendships')
-          .where('userId2', isEqualTo: currentUserId)
-          .where('status', isEqualTo: 'pending')
-          .get();
+      final response = await apiClient.post(path, query);
 
-      if (querySnapshot.docs.isEmpty) return [];
+      if (response is List) {
+        // 문서가 있는 항목만 필터링 (readTime 제외)
+        final documents =
+            response.where((doc) => doc['document'] != null).toList();
 
-      // 요청한 상대방 ID 리스트 추출
-      final requesterIds =
-          querySnapshot.docs.map((doc) => doc['userId1']).toList();
+        // 상대방 ID 리스트 추출
+        final targetUserIds = documents.map((doc) {
+          final data = doc['document']['fields'];
+          return data['userId1']['stringValue'];
+        }).toList();
 
-      // 요청한 상대방의 프로필 정보 가져오기
-      final usersSnapshot = await _firestore
-          .collection('users')
-          .where(FieldPath.documentId, whereIn: requesterIds)
-          .get();
+        if (targetUserIds.isEmpty) return [];
 
-      // 결과 결합: 요청 정보 + 상대방 프로필
-      return querySnapshot.docs.map((doc) {
-        final userData = usersSnapshot.docs.firstWhere(
-          (userDoc) => userDoc.id == doc['userId1'],
-        );
-        return {
-          'id': doc.id, // 친구 요청 문서 ID
-          'userId': userData.id,
-          'nickname': userData['nickname'],
-          'profileImage': userData['profileImage'],
-          'status': doc['status'],
-        };
-      }).toList();
+        // 상대방의 프로필 정보 가져오기
+        final users = await getUsersByIds(targetUserIds);
+
+        //users에 id로 request의 id를 추가
+        for (int i = 0; i < users.length; i++) {
+          users[i]['id'] = documents[i]['document']['name'].split('/').last;
+        }
+        return users;
+      } else {
+        return [];
+      }
     } catch (e) {
       throw Exception('받은 친구 요청 목록을 가져오는 데 실패했습니다: $e');
     }
   }
 
+  // 받은 친구 요청 수 가져오기
   static Future<int> getIncomingFriendRequestCount() async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
-    try {
-      final querySnapshot = await _firestore
-          .collection('friendships')
-          .where('userId2', isEqualTo: currentUserId)
-          .where('status', isEqualTo: 'pending')
-          .get();
+    const path = ':runQuery';
 
-      return querySnapshot.docs.length;
+    final query = {
+      'structuredQuery': {
+        'from': [
+          {'collectionId': 'friendships'}
+        ],
+        "where": {
+          "compositeFilter": {
+            "op": "AND",
+            "filters": [
+              {
+                "fieldFilter": {
+                  "field": {"fieldPath": "userId2"},
+                  "op": "EQUAL",
+                  "value": {"stringValue": currentUserId}
+                }
+              },
+              {
+                "fieldFilter": {
+                  "field": {"fieldPath": "status"},
+                  "op": "EQUAL",
+                  "value": {"stringValue": "pending"}
+                }
+              }
+            ]
+          }
+        }
+      }
+    };
+
+    try {
+      final response = await apiClient.post(path, query);
+
+      final count = response.where((doc) => doc['document'] != null).length;
+      return count;
     } catch (e) {
       throw Exception('받은 친구 요청 수를 가져오는 데 실패했습니다: $e');
     }
@@ -334,40 +499,111 @@ class FirestoreService {
   static Future<List<Map<String, dynamic>>> getFriends() async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
+    const path = ':runQuery';
+
+    final query = {
+      "structuredQuery": {
+        "from": [
+          {"collectionId": "friendships"}
+        ],
+        "where": {
+          "compositeFilter": {
+            "op": "AND",
+            "filters": [
+              {
+                "fieldFilter": {
+                  "field": {"fieldPath": "status"},
+                  "op": "EQUAL",
+                  "value": {"stringValue": "accepted"}
+                }
+              },
+              {
+                "compositeFilter": {
+                  "op": "OR",
+                  "filters": [
+                    {
+                      "fieldFilter": {
+                        "field": {"fieldPath": "userId1"},
+                        "op": "EQUAL",
+                        "value": {"stringValue": currentUserId}
+                      }
+                    },
+                    {
+                      "fieldFilter": {
+                        "field": {"fieldPath": "userId2"},
+                        "op": "EQUAL",
+                        "value": {"stringValue": currentUserId}
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    };
+
     try {
-      final friendshipsQuery = await _firestore
-          .collection('friendships')
-          .where('status', isEqualTo: 'accepted')
-          .where(
-            Filter.or(
-              Filter('userId1', isEqualTo: currentUserId),
-              Filter('userId2', isEqualTo: currentUserId),
-            ),
-          )
-          .get();
+      // 친구 관계 조회
+      final response = await apiClient.post(path, query);
 
-      final friendIds = friendshipsQuery.docs.map((doc) {
-        final data = doc.data();
-        return data['userId1'] == currentUserId
-            ? data['userId2']
-            : data['userId1'];
-      }).toList();
+      if (response is List) {
+        // 문서가 있는 항목만 필터링 (readTime 제외)
+        final documents =
+            response.where((doc) => doc['document'] != null).toList();
 
-      if (friendIds.isEmpty) return [];
+        // 상대방 ID 리스트 추출
+        final friendIds =
+            documents.where((doc) => doc['document'] != null).map((doc) {
+          final data = doc['document']['fields'];
+          final userId1 = data['userId1']['stringValue'];
+          final userId2 = data['userId2']['stringValue'];
+          return userId1 == currentUserId ? userId2 : userId1;
+        }).toList();
 
-      // 친구 프로필 정보 가져오기
-      final friendsData = await _firestore
-          .collection('users')
-          .where(FieldPath.documentId, whereIn: friendIds)
-          .get();
+        if (friendIds.isEmpty) return [];
 
-      return friendsData.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id; // 문서 ID 추가
-        return data;
-      }).toList();
+        // 상대방의 프로필 정보 가져오기
+        final friends = await getUsersByIds(friendIds);
+        return friends;
+      } else {
+        return [];
+      }
     } catch (e) {
+      print(e);
       throw Exception('친구 목록을 가져오는 데 실패했습니다: $e');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getUsersByIds(
+      List<dynamic> userIds) async {
+    const path = ':batchGet';
+
+    final body = {
+      "documents": userIds.map((id) {
+        return "projects/time-a-42e3d/databases/(default)/documents/users/$id";
+      }).toList(),
+    };
+
+    try {
+      final response = await apiClient.post(path, body);
+
+      if (response is List) {
+        return response.map((doc) {
+          final data = doc['found'];
+          final userId = doc['found']['name'].split('/').last;
+          return {
+            'userId': userId,
+            'nickname': data['fields']['nickname']['stringValue'],
+            'profileImage': data['fields']['profileImage']['stringValue'],
+          };
+        }).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      throw Exception('사용자 정보를 가져오는 데 실패했습니다: $e');
     }
   }
 
@@ -375,72 +611,144 @@ class FirestoreService {
   static Future<int> getFriendCount() async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
-    try {
-      final friendshipsQuery = await _firestore
-          .collection('friendships')
-          .where('status', isEqualTo: 'accepted')
-          .where(
-            Filter.or(
-              Filter('userId1', isEqualTo: currentUserId),
-              Filter('userId2', isEqualTo: currentUserId),
-            ),
-          )
-          .get();
+    const path = ':runQuery';
 
-      return friendshipsQuery.docs.length;
+    final query = {
+      "structuredQuery": {
+        "from": [
+          {"collectionId": "friendships"}
+        ],
+        "where": {
+          "compositeFilter": {
+            "op": "AND",
+            "filters": [
+              {
+                "fieldFilter": {
+                  "field": {"fieldPath": "status"},
+                  "op": "EQUAL",
+                  "value": {"stringValue": "accepted"}
+                }
+              },
+              {
+                "compositeFilter": {
+                  "op": "OR",
+                  "filters": [
+                    {
+                      "fieldFilter": {
+                        "field": {"fieldPath": "userId1"},
+                        "op": "EQUAL",
+                        "value": {"stringValue": currentUserId}
+                      }
+                    },
+                    {
+                      "fieldFilter": {
+                        "field": {"fieldPath": "userId2"},
+                        "op": "EQUAL",
+                        "value": {"stringValue": currentUserId}
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    };
+
+    try {
+      final response = await apiClient.post(path, query);
+
+      if (response is List) {
+        // 문서가 있는 항목만 필터링 (readTime 제외)
+        final documents =
+            response.where((doc) => doc['document'] != null).toList();
+        return documents.length;
+      } else {
+        return 0; // 비정상적 응답
+      }
     } catch (e) {
       throw Exception('친구 수를 가져오는 데 실패했습니다: $e');
     }
   }
 
-  // 친구 삭제
+  // 친구 삭제 함수
   static Future<void> deleteFriend(String targetUserId) async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
-    try {
-      final friendshipQuery = await _firestore
-          .collection('friendships')
-          .where(
-            Filter.or(
-              Filter.and(Filter('userId1', isEqualTo: currentUserId),
-                  Filter('userId2', isEqualTo: targetUserId)),
-              Filter.and(Filter('userId1', isEqualTo: targetUserId),
-                  Filter('userId2', isEqualTo: currentUserId)),
-            ),
-          )
-          .get();
+    const path = ':runQuery';
 
-      for (var doc in friendshipQuery.docs) {
-        await _firestore.collection('friendships').doc(doc.id).delete();
+    final query = {
+      "structuredQuery": {
+        "from": [
+          {"collectionId": "friendships"}
+        ],
+        "where": {
+          "compositeFilter": {
+            "op": "OR",
+            "filters": [
+              {
+                "compositeFilter": {
+                  "op": "AND",
+                  "filters": [
+                    {
+                      "fieldFilter": {
+                        "field": {"fieldPath": "userId1"},
+                        "op": "EQUAL",
+                        "value": {"stringValue": currentUserId}
+                      }
+                    },
+                    {
+                      "fieldFilter": {
+                        "field": {"fieldPath": "userId2"},
+                        "op": "EQUAL",
+                        "value": {"stringValue": targetUserId}
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "compositeFilter": {
+                  "op": "AND",
+                  "filters": [
+                    {
+                      "fieldFilter": {
+                        "field": {"fieldPath": "userId1"},
+                        "op": "EQUAL",
+                        "value": {"stringValue": targetUserId}
+                      }
+                    },
+                    {
+                      "fieldFilter": {
+                        "field": {"fieldPath": "userId2"},
+                        "op": "EQUAL",
+                        "value": {"stringValue": currentUserId}
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "limit": 1
+      }
+    };
+
+    try {
+      final response = await ApiClient().post(path, query);
+
+      if (response is List && response.isNotEmpty) {
+        final documentPath = response.first['document']['name'];
+        final friendshipId = documentPath.split('/').last;
+
+        await ApiClient().delete('/friendships/$friendshipId');
+      } else {
+        throw Exception('친구 관계를 찾을 수 없습니다.');
       }
     } catch (e) {
       throw Exception('친구 삭제 실패: $e');
-    }
-  }
-
-  // 친구 관계 상태 확인
-  static Future<String?> getFriendshipStatus(String targetUserId) async {
-    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
-
-    try {
-      final friendshipQuery = await _firestore
-          .collection('friendships')
-          .where(
-            Filter.or(
-              Filter.and(Filter('userId1', isEqualTo: currentUserId),
-                  Filter('userId2', isEqualTo: targetUserId)),
-              Filter.and(Filter('userId1', isEqualTo: targetUserId),
-                  Filter('userId2', isEqualTo: currentUserId)),
-            ),
-          )
-          .get();
-
-      if (friendshipQuery.docs.isEmpty) return null;
-
-      final status = friendshipQuery.docs.first.data()['status'];
-      return status; // pending, accepted, rejected, canceled
-    } catch (e) {
-      throw Exception('친구 관계 상태를 확인할 수 없습니다: $e');
     }
   }
 
@@ -497,13 +805,11 @@ class FirestoreService {
     }
   }
 
-  static Future<Map<String, dynamic>> getCapsule(String capsuleId) async {
+  static Future<Capsule> getCapsule(String capsuleId) async {
+    final path = '/capsules/$capsuleId';
     try {
-      final querySnapshot =
-          await _firestore.collection('capsules').doc(capsuleId).get();
-
-      final capsule = querySnapshot.data();
-      capsule!['id'] = querySnapshot.id; // 문서 ID를 추가
+      final response = await apiClient.get(path);
+      final Capsule capsule = Capsule.fromJson(capsuleId, response);
       return capsule;
     } catch (e) {
       throw Exception('캡슐을 가져오는 데 실패했습니다: $e');

@@ -78,7 +78,7 @@ class CardBuilder extends StatelessWidget {
       controller: PageController(viewportFraction: 0.6),
       itemBuilder: (context, index) {
         final capsule = capsules[index];
-        final unlockDate = (capsule.canUnlockedAt as Timestamp).toDate();
+        final unlockDate = capsule.canUnlockedAt;
         final isUnlocked = capsule.unlockedAt != null;
         final imageUrl = capsule.imageUrl ?? '';
         final content = capsule.content;

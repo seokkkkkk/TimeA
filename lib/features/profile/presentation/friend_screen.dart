@@ -188,7 +188,7 @@ class _FriendScreenState extends State<FriendScreen> {
                                               .shrinkWrap, // 터치 영역 최소화
                                         ),
                                         onPressed: () =>
-                                            _deleteFriend(friend['id']),
+                                            _deleteFriend(friend['userId']),
                                         child: const Text(
                                           '삭제',
                                           style: TextStyle(

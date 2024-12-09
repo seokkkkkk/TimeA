@@ -11,12 +11,18 @@ class ApiClient {
   }
 
   // 공통 GET 요청 함수
-  Future<dynamic> get(String path) async {
+  Future<dynamic> get(
+    String path, {
+    Map<String, List<String>>? queryParameters,
+  }) async {
     final token = await _getToken();
     if (token == null) throw Exception('Firebase ID 토큰이 없습니다.');
 
-    final uri = Uri.https(baseUrl,
-        '/v1/projects/time-a-42e3d/databases/(default)/documents$path');
+    final uri = Uri.https(
+      baseUrl,
+      '/v1/projects/time-a-42e3d/databases/(default)/documents$path',
+      queryParameters,
+    );
     final response = await http.get(
       uri,
       headers: {'Authorization': 'Bearer $token'},
